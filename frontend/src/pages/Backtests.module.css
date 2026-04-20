@@ -1,0 +1,608 @@
+.page {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .page { grid-template-columns: 1fr; }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.select {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pairRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.browseBtn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+.browseBtn:hover { background: var(--border); }
+
+.submitBtn {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.submitBtn:hover { background: #2563eb; }
+.submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error {
+  font-size: 12px;
+  color: var(--red);
+  padding: 6px;
+  background: rgba(239,68,68,0.1);
+  border-radius: 4px;
+}
+
+.jobList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.jobItem {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jobItem:hover { border-color: var(--blue); }
+.jobSelected { border-color: var(--blue) !important; background: var(--bg3); }
+
+/* Header row */
+.jobHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.jobName {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline delete button on card */
+.jobDeleteBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.jobDeleteBtn:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.jobMeta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.jobStatus {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.jobDate {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Metrics section inside card */
+.jobMetrics {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jobMetricBig {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.jobMetricRow {
+  display: flex;
+  gap: 0;
+}
+
+.jobMetricItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.jobMetricLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+
+.jobMetricItem span:last-child {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.jobError {
+  font-size: 10px;
+  color: var(--red);
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.placeholder {
+  padding: 60px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.detailTitle { font-size: 18px; font-weight: 700; }
+.muted { font-size: 12px; color: var(--muted); }
+
+.status {
+  padding: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+
+.deleteBtn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.deleteBtn:hover { background: rgba(239,68,68,0.1); }
+
+.chartCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.chartTitle {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* ── Strategy source: saved config list ───────────────────────────────────── */
+
+.emptyConfigs {
+  padding: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.configList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.cfgCard {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cfgCard:hover     { border-color: var(--accent); }
+.cfgCardSelected   { border-color: var(--blue) !important; background: rgba(59,130,246,0.07); }
+
+.cfgHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cfgName {
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfgHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.cfgCheck { font-size: 13px; color: var(--blue); font-weight: 700; }
+
+.cfgMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cfgStrategy {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cfgFilter {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cfgChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cfgChip {
+  padding: 1px 6px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cfgPairs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.cfgPairChip {
+  padding: 1px 5px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Applied-config banner */
+.appliedBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.appliedIcon { color: var(--green); font-weight: 700; }
+
+/* Config pair hints (quick-select buttons below pair dropdown) */
+.pairHints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.pairHintsLabel {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-right: 2px;
+}
+
+.pairHintBtn {
+  padding: 2px 7px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.pairHintBtn:hover { color: var(--text); border-color: var(--text); }
+.pairHintActive    { border-color: var(--blue) !important; color: var(--text) !important; background: rgba(59,130,246,0.1) !important; }
+
+/* Timeframe label hint */
+.labelHint { font-size: 10px; color: var(--blue); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+/* ── Strategy preview widget ──────────────────────────────────────────────── */
+
+.stratPickBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s;
+}
+.stratPickBtn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.stratPreview {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.stratPreview:hover { border-color: var(--accent); }
+
+.stratPreviewInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stratPreviewName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stratPreviewBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stratPreviewDesc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stratChangeBtn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.stratChangeBtn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--accent);
+}
+
+/* ── Strategy preview widget ──────────────────────────────────────────────── */
+
+.stratPickBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s;
+}
+.stratPickBtn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.stratPreview {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.stratPreview:hover { border-color: var(--accent); }
+
+.stratPreviewInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stratPreviewName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stratPreviewBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stratPreviewDesc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stratChangeBtn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.stratChangeBtn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--accent);
+}

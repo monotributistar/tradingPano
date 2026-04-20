@@ -1,0 +1,78 @@
+version: "3.9"
+
+# ── Production compose ────────────────────────────────────────────────────────
+# Build and run fully containerised images (no bind mounts).
+#
+#   docker compose up --build          # first run
+#   docker compose up -d               # background
+#   docker compose logs -f api         # tail logs
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  app-data:          # persistent trading data (SQLite DB + market cache)
+  bot-config:        # read-only config mount
+
+services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: production
+    container_name: trading-api
+    restart: unless-stopped
+    networks: [app-net]
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    volumes:
+      # Persist DB and cache across restarts
+      - app-data:/app/data
+      # Config file (read-only); falls back to built-in defaults if missing
+      - ./crypto_bot/config.yaml:/app/crypto_bot/config.yaml:ro
+
+    environment:
+      PYTHONPATH: /app
+      BOT_CONFIG_PATH: /app/crypto_bot/config.yaml
+      # Forwarded to ccxt / strategies as needed:
+      EXCHANGE_API_KEY:    ${EXCHANGE_API_KEY:-}
+      EXCHANGE_API_SECRET: ${EXCHANGE_API_SECRET:-}
+      EXCHANGE_PASSPHRASE: ${EXCHANGE_PASSPHRASE:-}
+      EXCHANGE_NAME:       ${EXCHANGE_NAME:-kucoin}
+      LOG_LEVEL:           ${LOG_LEVEL:-INFO}
+
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout:  5s
+      start_period: 10s
+      retries: 3
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: trading-frontend
+    restart: unless-stopped
+    networks: [app-net]
+
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 15s
+      timeout:  5s
+      start_period: 5s
+      retries: 3

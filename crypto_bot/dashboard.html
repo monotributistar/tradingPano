@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Bot Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #252836;
+      --border: #2d3148; --text: #e2e8f0; --muted: #8892a4;
+      --green: #22c55e; --red: #ef4444; --blue: #3b82f6;
+      --btc: #f7931a; --eth: #627eea; --sol: #9945ff;
+    }
+    .light { --bg: #f8fafc; --bg2: #ffffff; --bg3: #f1f5f9; --border: #e2e8f0; --text: #1e293b; --muted: #64748b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    header h1 { font-size: 18px; font-weight: 700; color: var(--blue); }
+    .header-controls { display: flex; gap: 10px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+    .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 13px; transition: background 0.15s; }
+    .btn:hover { background: var(--border); }
+    .btn-primary { background: var(--blue); border-color: var(--blue); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    input[type="file"] { display: none; }
+    main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+    /* Summary cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .card-value { font-size: 22px; font-weight: 700; }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .pos { color: var(--green); } .neg { color: var(--red); } .neu { color: var(--text); }
+
+    /* Charts grid */
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+    @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .chart-card h3 { font-size: 13px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .chart-card canvas { max-height: 240px; }
+    .chart-card.wide { grid-column: 1 / -1; }
+
+    /* Table */
+    .section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 22px; }
+    .section h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .filter-select { padding: 5px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; white-space: nowrap; }
+    td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tr:hover td { background: var(--bg3); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-buy { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-sell { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* Strategy comparison table */
+    .compare-table td:nth-child(2) { font-weight: 600; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty h2 { font-size: 18px; margin-bottom: 8px; }
+
+    /* Status bar */
+    #statusbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-top: 1px solid var(--border); padding: 6px 20px; font-size: 12px; color: var(--muted); display: flex; gap: 20px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>⚡ Crypto Bot</h1>
+  <div class="header-controls">
+    <label class="btn btn-primary">
+      📂 Cargar trades.json
+      <input type="file" id="tradesFile" accept=".json" />
+    </label>
+    <label class="btn">
+      📊 Cargar backtest
+      <input type="file" id="backtestFile" accept=".json" />
+    </label>
+    <select class="filter-select" id="pairFilter" onchange="applyFilters()">
+      <option value="">Todos los pares</option>
+    </select>
+    <select class="filter-select" id="strategyFilter" onchange="applyFilters()">
+      <option value="">Todas las estrategias</option>
+    </select>
+    <button class="btn" onclick="toggleTheme()">🌗 Tema</button>
+    <button class="btn" onclick="toggleAutoReload()">🔄 Auto-reload: <span id="arStatus">OFF</span></button>
+  </div>
+</header>
+
+<main>
+  <!-- Summary Cards -->
+  <div class="cards" id="summaryCards">
+    <div class="card"><div class="card-label">Capital Inicial</div><div class="card-value neu" id="cardInitial">—</div></div>
+    <div class="card"><div class="card-label">Valor Actual</div><div class="card-value neu" id="cardCurrent">—</div></div>
+    <div class="card"><div class="card-label">PnL Total</div><div class="card-value neu" id="cardPnl">—</div></div>
+    <div class="card"><div class="card-label">Win Rate</div><div class="card-value neu" id="cardWinRate">—</div></div>
+    <div class="card"><div class="card-label">Total Trades</div><div class="card-value neu" id="cardTrades">—</div></div>
+    <div class="card"><div class="card-label">Mejor Par</div><div class="card-value neu" id="cardBestPair">—</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts">
+    <div class="chart-card wide">
+      <h3>📈 Equity Curve</h3>
+      <canvas id="equityChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>💹 PnL por Trade</h3>
+      <canvas id="pnlChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>🥧 PnL por Par</h3>
+      <canvas id="pairPnlChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Backtest comparison -->
+  <div class="section" id="backtestSection" style="display:none">
+    <h3>🔬 Resultados de Backtest</h3>
+    <div id="backtestContent"></div>
+  </div>
+
+  <!-- Trade Log -->
+  <div class="section">
+    <h3>📋 Trade Log</h3>
+    <div class="filters">
+      <input class="filter-select" type="date" id="dateFrom" onchange="applyFilters()" placeholder="Desde" />
+      <input class="filter-select" type="date" id="dateTo" onchange="applyFilters()" placeholder="Hasta" />
+      <select class="filter-select" id="typeFilter" onchange="applyFilters()">
+        <option value="">Todos los tipos</option>
+        <option value="buy">Compras</option>
+        <option value="sell">Ventas</option>
+      </select>
+    </div>
+    <div id="tradeTableContainer">
+      <div class="empty"><h2>Sin datos</h2><p>Carga un archivo trades.json para comenzar.</p></div>
+    </div>
+  </div>
+</main>
+
+<div id="statusbar">
+  <span id="sbFile">Sin archivo cargado</span>
+  <span id="sbTrades">0 trades</span>
+  <span id="sbLastUpdate">—</span>
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+let allTrades = [];
+let filteredTrades = [];
+let charts = {};
+let autoReloadInterval = null;
+let lastTradesFile = null;
+
+const PAIR_COLORS = { 'BTC/USDT': '#f7931a', 'ETH/USDT': '#627eea', 'SOL/USDT': '#9945ff' };
+function pairColor(pair) { return PAIR_COLORS[pair] || '#3b82f6'; }
+
+// ─── Theme ──────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  document.documentElement.classList.toggle('light');
+  if (allTrades.length) renderAll();
+}
+
+// ─── File loaders ────────────────────────────────────────────────────────────
+document.getElementById('tradesFile').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  lastTradesFile = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      allTrades = JSON.parse(ev.target.result);
+      document.getElementById('sbFile').textContent = `📄 ${file.name}`;
+      document.getElementById('sbLastUpdate').textContent = 'Cargado: ' + new Date().toLocaleTimeString();
+      populateFilters();
+      applyFilters();
+    } catch(err) { alert('Error parsing JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('backtestFile').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      renderBacktest(Array.isArray(data) ? data : [data]);
+    } catch(err) { alert('Error parsing backtest JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+// ─── Filters ─────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const pairs = [...new Set(allTrades.map(t => t.pair).filter(Boolean))];
+  const strategies = [...new Set(allTrades.map(t => t.strategy).filter(Boolean))];
+
+  const pairSel = document.getElementById('pairFilter');
+  pairSel.innerHTML = '<option value="">Todos los pares</option>';
+  pairs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pairSel.appendChild(o); });
+
+  const stratSel = document.getElementById('strategyFilter');
+  stratSel.innerHTML = '<option value="">Todas las estrategias</option>';
+  strategies.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; stratSel.appendChild(o); });
+}
+
+function applyFilters() {
+  const pair = document.getElementById('pairFilter').value;
+  const strategy = document.getElementById('strategyFilter').value;
+  const type = document.getElementById('typeFilter').value;
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+
+  filteredTrades = allTrades.filter(t => {
+    if (pair && t.pair !== pair) return false;
+    if (strategy && t.strategy !== strategy) return false;
+    if (type && t.type !== type) return false;
+    if (dateFrom && t.timestamp < dateFrom) return false;
+    if (dateTo && t.timestamp > dateTo + 'T23:59:59') return false;
+    return true;
+  });
+
+  renderAll();
+}
+
+// ─── Main render ─────────────────────────────────────────────────────────────
+function renderAll() {
+  renderSummary();
+  renderEquityCurve();
+  renderPnlChart();
+  renderPairPnlChart();
+  renderTradeTable();
+  document.getElementById('sbTrades').textContent = `${filteredTrades.length} trades`;
+}
+
+// ─── Summary ──────────────────────────────────────────────────────────────────
+function renderSummary() {
+  const sells = filteredTrades.filter(t => t.type === 'sell' && t.pnl !== undefined);
+  const totalPnl = sells.reduce((s, t) => s + (t.pnl || 0), 0);
+  const winners = sells.filter(t => t.pnl > 0);
+  const winRate = sells.length ? (winners.length / sells.length * 100) : 0;
+
+  // Estimate current value from last snapshot or sum
+  const buys = filteredTrades.filter(t => t.type === 'buy');
+  const spent = buys.reduce((s, t) => s + (t.price * t.qty + (t.fee || 0)), 0);
+  const returned = sells.reduce((s, t) => s + (t.price * t.qty - (t.fee || 0)), 0);
+  const netPnl = returned - spent;
+
+  // Best pair by pnl
+  const pnlByPair = {};
+  sells.forEach(t => { pnlByPair[t.pair] = (pnlByPair[t.pair] || 0) + t.pnl; });
+  const bestPair = Object.entries(pnlByPair).sort((a,b) => b[1]-a[1])[0];
+
+  set('cardInitial', '—');
+  set('cardCurrent', '—');
+  const pnlEl = document.getElementById('cardPnl');
+  pnlEl.textContent = totalPnl !== 0 ? fmtUSD(totalPnl) : '—';
+  pnlEl.className = 'card-value ' + (totalPnl > 0 ? 'pos' : totalPnl < 0 ? 'neg' : 'neu');
+  set('cardWinRate', sells.length ? winRate.toFixed(1) + '%' : '—');
+  set('cardTrades', sells.length || '—');
+  set('cardBestPair', bestPair ? bestPair[0] : '—');
+}
+
+// ─── Equity curve ─────────────────────────────────────────────────────────────
+function renderEquityCurve() {
+  const sells = filteredTrades.filter(t => t.type === 'sell' && t.pnl !== undefined)
+    .sort((a,b) => a.timestamp > b.timestamp ? 1 : -1);
+  if (!sells.length) { clearChart('equityChart'); return; }
+
+  let cumPnl = 0;
+  const labels = [], data = [];
+  sells.forEach(t => {
+    cumPnl += t.pnl;
+    labels.push(t.timestamp ? t.timestamp.substring(0,16) : '');
+    data.push(+cumPnl.toFixed(4));
+  });
+
+  const isDark = !document.documentElement.classList.contains('light');
+  const color = cumPnl >= 0 ? '#22c55e' : '#ef4444';
+  rebuildChart('equityChart', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'PnL Acumulado (USDT)',
+        data,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true,
+        tension: 0.3,
+        pointRadius: sells.length > 60 ? 0 : 3,
+        borderWidth: 2,
+      }]
+    },
+    options: chartOptions(isDark, 'USDT')
+  });
+}
+
+// ─── PnL bar chart ───────────────────────────────────────────────────────────
+function renderPnlChart() {
+  const sells = filteredTrades.filter(t => t.type === 'sell' && t.pnl !== undefined)
+    .sort((a,b) => a.timestamp > b.timestamp ? 1 : -1).slice(-60);
+  if (!sells.length) { clearChart('pnlChart'); return; }
+
+  const isDark = !document.documentElement.classList.contains('light');
+  rebuildChart('pnlChart', {
+    type: 'bar',
+    data: {
+      labels: sells.map(t => t.timestamp ? t.timestamp.substring(5,16) : ''),
+      datasets: [{
+        label: 'PnL por Trade',
+        data: sells.map(t => +t.pnl.toFixed(4)),
+        backgroundColor: sells.map(t => t.pnl >= 0 ? '#22c55e88' : '#ef444488'),
+        borderColor: sells.map(t => t.pnl >= 0 ? '#22c55e' : '#ef4444'),
+        borderWidth: 1,
+      }]
+    },
+    options: chartOptions(isDark, 'USDT')
+  });
+}
+
+// ─── PnL por par ─────────────────────────────────────────────────────────────
+function renderPairPnlChart() {
+  const sells = filteredTrades.filter(t => t.type === 'sell' && t.pnl !== undefined);
+  if (!sells.length) { clearChart('pairPnlChart'); return; }
+
+  const pnlByPair = {};
+  sells.forEach(t => { pnlByPair[t.pair] = (pnlByPair[t.pair] || 0) + t.pnl; });
+  const pairs = Object.keys(pnlByPair);
+  const values = pairs.map(p => +pnlByPair[p].toFixed(4));
+
+  const isDark = !document.documentElement.classList.contains('light');
+  rebuildChart('pairPnlChart', {
+    type: 'doughnut',
+    data: {
+      labels: pairs,
+      datasets: [{
+        data: values.map(Math.abs),
+        backgroundColor: pairs.map(p => pairColor(p) + 'cc'),
+        borderColor: pairs.map(pairColor),
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: isDark ? '#e2e8f0' : '#1e293b' } },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmtUSD(values[ctx.dataIndex])}` } }
+      }
+    }
+  });
+}
+
+// ─── Trade table ─────────────────────────────────────────────────────────────
+function renderTradeTable() {
+  const container = document.getElementById('tradeTableContainer');
+  const trades = [...filteredTrades].sort((a,b) => b.timestamp > a.timestamp ? 1 : -1);
+
+  if (!trades.length) {
+    container.innerHTML = '<div class="empty"><h2>Sin trades</h2><p>Carga un trades.json o ajusta los filtros.</p></div>';
+    return;
+  }
+
+  let html = `<table>
+    <thead><tr>
+      <th>Fecha</th><th>Tipo</th><th>Par</th><th>Precio</th>
+      <th>Qty</th><th>Fee</th><th>PnL</th><th>Estrategia</th><th>Razón</th>
+    </tr></thead><tbody>`;
+
+  trades.slice(0, 200).forEach(t => {
+    const pnl = t.pnl !== undefined ? t.pnl : null;
+    const pnlStr = pnl !== null
+      ? `<span class="${pnl >= 0 ? 'pos' : 'neg'}">${fmtUSD(pnl)} (${t.pnl_pct != null ? t.pnl_pct.toFixed(2) : '—'}%)</span>`
+      : '—';
+    const pairColor_ = pairColor(t.pair);
+    html += `<tr>
+      <td>${(t.timestamp || '').substring(0,16)}</td>
+      <td><span class="badge badge-${t.type}">${t.type?.toUpperCase()}</span></td>
+      <td><span style="color:${pairColor_};font-weight:600">${t.pair || '—'}</span></td>
+      <td>${t.price ? fmtPrice(t.price) : '—'}</td>
+      <td>${t.qty ? t.qty.toFixed(6) : '—'}</td>
+      <td>${t.fee ? fmtUSD(t.fee) : '—'}</td>
+      <td>${pnlStr}</td>
+      <td><span style="color:var(--muted)">${t.strategy || '—'}</span></td>
+      <td style="color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${t.reason || '—'}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  if (trades.length > 200) html += `<div style="padding:8px;color:var(--muted);font-size:12px">Mostrando 200 de ${trades.length} trades</div>`;
+  container.innerHTML = html;
+}
+
+// ─── Backtest results ─────────────────────────────────────────────────────────
+function renderBacktest(results) {
+  const section = document.getElementById('backtestSection');
+  const content = document.getElementById('backtestContent');
+  section.style.display = 'block';
+
+  if (!results.length) return;
+
+  // If multiple results → comparison table
+  let html = `<table class="compare-table">
+    <thead><tr>
+      <th>Estrategia</th><th>Par</th><th>Período</th>
+      <th>Return</th><th>Sharpe</th><th>Sortino</th>
+      <th>Max DD</th><th>Win Rate</th><th>Trades</th><th>PF</th>
+    </tr></thead><tbody>`;
+
+  const sorted = [...results].sort((a,b) => (b.metrics?.sharpe_ratio||0) - (a.metrics?.sharpe_ratio||0));
+  sorted.forEach(r => {
+    const m = r.metrics || {};
+    const ret = m.total_return_pct || 0;
+    html += `<tr>
+      <td style="font-weight:600">${r.strategy}</td>
+      <td>${r.pair}</td><td>${r.period}</td>
+      <td style="color:${ret>=0?'var(--green)':'var(--red)'}">${ret>=0?'+':''}${ret.toFixed(1)}%</td>
+      <td>${(m.sharpe_ratio||0).toFixed(2)}</td>
+      <td>${(m.sortino_ratio||0).toFixed(2)}</td>
+      <td style="color:var(--red)">-${(m.max_drawdown_pct||0).toFixed(1)}%</td>
+      <td>${(m.win_rate_pct||0).toFixed(1)}%</td>
+      <td>${m.total_trades||0}</td>
+      <td>${(m.profit_factor||0).toFixed(2)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  content.innerHTML = html;
+
+  // Render equity curves for single result
+  if (results.length === 1 && results[0].equity_curve) {
+    renderBacktestEquity(results[0]);
+  }
+}
+
+function renderBacktestEquity(result) {
+  const ec = result.equity_curve;
+  const ts = result.equity_timestamps;
+  if (!ec || !ec.length) return;
+
+  // Inject equity chart in backtest section
+  const container = document.getElementById('backtestContent');
+  const div = document.createElement('div');
+  div.innerHTML = '<canvas id="btEquityChart" style="margin-top:16px;max-height:200px"></canvas>';
+  container.appendChild(div);
+
+  const isDark = !document.documentElement.classList.contains('light');
+  const color = ec[ec.length-1] >= ec[0] ? '#22c55e' : '#ef4444';
+  new Chart(document.getElementById('btEquityChart'), {
+    type: 'line',
+    data: {
+      labels: ts ? ts.map(t => t.substring(0,16)) : ec.map((_, i) => i),
+      datasets: [{
+        label: 'Equity (USDT)',
+        data: ec,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+      }]
+    },
+    options: chartOptions(isDark, 'USDT')
+  });
+}
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+function chartOptions(isDark, unit) {
+  const textColor = isDark ? '#8892a4' : '#64748b';
+  const gridColor = isDark ? '#2d3148' : '#e2e8f0';
+  return {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${unit === 'USDT' ? fmtUSD(ctx.raw) : ctx.raw}` } }
+    },
+    scales: {
+      x: { ticks: { color: textColor, maxRotation: 0, maxTicksLimit: 8 }, grid: { color: gridColor } },
+      y: { ticks: { color: textColor }, grid: { color: gridColor } }
+    }
+  };
+}
+
+function rebuildChart(id, config) {
+  if (charts[id]) { charts[id].destroy(); }
+  charts[id] = new Chart(document.getElementById(id), config);
+}
+
+function clearChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ─── Auto-reload ──────────────────────────────────────────────────────────────
+function toggleAutoReload() {
+  const statusEl = document.getElementById('arStatus');
+  if (autoReloadInterval) {
+    clearInterval(autoReloadInterval);
+    autoReloadInterval = null;
+    statusEl.textContent = 'OFF';
+  } else {
+    autoReloadInterval = setInterval(() => {
+      // Re-read last file if available (browser security: can't auto-read file)
+      document.getElementById('sbLastUpdate').textContent = 'Last poll: ' + new Date().toLocaleTimeString();
+    }, 10000);
+    statusEl.textContent = 'ON (10s)';
+  }
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function fmtUSD(v) { return (v >= 0 ? '+' : '') + v.toFixed(4) + ' USDT'; }
+function fmtPrice(v) { return v >= 1000 ? v.toLocaleString('en-US', {maximumFractionDigits: 2}) : v.toFixed(4); }
+function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+</script>
+</body>
+</html>

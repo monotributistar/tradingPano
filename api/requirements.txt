@@ -1,0 +1,16 @@
+fastapi>=0.111
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.0
+pydantic-settings>=2.0
+pyyaml>=6.0
+# Bot dependencies (shared)
+ccxt>=4.0
+pandas>=2.0
+numpy>=1.24
+rich>=13.0
+click>=8.0
+# System metrics (Phase 3)
+psutil>=5.9
+# Database migrations (Phase 4)
+alembic>=1.13

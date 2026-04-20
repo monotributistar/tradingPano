@@ -1,0 +1,288 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.subtitle code {
+  background: var(--bg3);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* ── Controls ───────────────────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modeToggle { display: flex; gap: 6px; }
+
+.modeBtn {
+  padding: 7px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modeBtnActive {
+  border-color: var(--blue);
+  color: var(--text);
+  background: rgba(59,130,246,0.1);
+}
+
+.modeLive.modeBtnActive {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(239,68,68,0.1);
+}
+
+.startBtn {
+  padding: 8px 18px;
+  background: var(--blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.startBtn:hover { background: #2563eb; }
+.startBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.stopBtn {
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.stopBtn:hover { background: rgba(239,68,68,0.1); }
+.stopBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Alerts ─────────────────────────────────────────────────────────────────── */
+
+.error {
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.warning {
+  padding: 10px 14px;
+  background: rgba(234,179,8,0.1);
+  border: 1px solid rgba(234,179,8,0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--yellow);
+}
+
+.warning code {
+  background: rgba(255,255,255,0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ── Summary bar ────────────────────────────────────────────────────────────── */
+
+.summaryBar {
+  display: flex;
+  gap: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stat {
+  flex: 1;
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+
+.stat:last-child { border-right: none; }
+
+.statLabel {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Slot grid ──────────────────────────────────────────────────────────────── */
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.slotCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slotCrashed {
+  border-color: var(--red) !important;
+}
+
+/* ── Slot header ─────────────────────────────────────────────────────────────── */
+
+.slotHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotGreen {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+
+.dotGray  { background: var(--muted); }
+.dotRed   { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.slotName {
+  font-size: 14px;
+  font-weight: 700;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slotMode {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg3);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── Slot body rows ─────────────────────────────────────────────────────────── */
+
+.slotBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.rowLabel { color: var(--muted); }
+.rowValue { font-weight: 600; }
+
+/* ── Capital bar ─────────────────────────────────────────────────────────────── */
+
+.capitalBar {
+  width: 100%;
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.capitalFill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Slot error ─────────────────────────────────────────────────────────────── */
+
+.slotError {
+  font-size: 11px;
+  color: var(--red);
+  background: rgba(239,68,68,0.08);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+/* ── Empty / loading ────────────────────────────────────────────────────────── */
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty code {
+  background: var(--bg3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}

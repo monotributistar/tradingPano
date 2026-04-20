@@ -1,0 +1,27 @@
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+.pad_none { padding: 0; }
+.pad_sm   { padding: 10px; }
+.pad_md   { padding: 16px; }
+.pad_lg   { padding: 24px; }

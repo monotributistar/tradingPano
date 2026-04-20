@@ -1,0 +1,29 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.divider {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.value {
+  color: var(--text);
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.muted { color: var(--muted); font-weight: 400; }

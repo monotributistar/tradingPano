@@ -1,0 +1,34 @@
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 8000;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+
+.dialog {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.15s ease;
+  max-width: calc(100vw - 32px);
+}
+@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 14px;
+}
+.close {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 14px; padding: 2px 6px;
+  border-radius: 4px;
+}
+.close:hover { background: var(--bg3); color: var(--text); }
+.body   { padding: 18px; overflow-y: auto; flex: 1; }
+.footer { padding: 12px 18px; border-top: 1px solid var(--border); background: var(--bg3); }

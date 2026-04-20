@@ -1,0 +1,291 @@
+active_strategy: momentum_burst
+backtest:
+  data_source: kucoin
+  default_pair: NEAR/USDT
+  default_period: 6m
+  fee_pct: 0.1
+  initial_capital: 20
+  slippage_pct: 0.05
+  timeframe: 1h
+exchange: bybit
+logging:
+  file: data/bot.log
+  level: INFO
+  rich_console: true
+pairs:
+- ETH/USDT
+- NEAR/USDT
+paper:
+  fee_pct: 0.1
+  initial_balance: 20
+strategies:
+  bb_squeeze:
+    amount_per_trade: 10
+    atr_period: 14
+    bb_period: 20
+    bb_std: 2.0
+    description: Bollinger Band squeeze — opera la explosion tras compresion de volatilidad
+    squeeze_percentile: 20
+    time_exit_bars: 20
+    trailing_atr_mult: 2.0
+    vol_mult: 1.3
+  bollinger_dca:
+    bb_period: 20
+    bb_std: 2.0
+    buy_on_lower_band: true
+    dca_amount: 5
+    description: DCA cuando el precio toca banda inferior de Bollinger
+    max_positions: 5
+    sell_on_upper_band: true
+    take_profit_pct: 2.0
+  breakout:
+    amount_per_trade: 10
+    atr_period: 14
+    channel_period: 20
+    description: Breakout de canal Donchian con confirmacion de volumen (optimizado
+      NEAR/USDT 4h)
+    stop_atr_mult: 2.0
+    take_profit_pct: 4.0
+    trend_ema: 100
+    trend_filter: true
+    vol_mult: 1.5
+    vol_period: 20
+  ema_crossover:
+    amount_per_trade: 5
+    description: 'Momentum: compra en golden cross, vende en death cross'
+    fast_ema: 9
+    min_volume_filter: true
+    signal_ema: 5
+    slow_ema: 21
+    trailing_stop_pct: 2.0
+  grid_dynamic:
+    amount_per_level: 3
+    atr_period: 14
+    description: Grid trading con bandas que se ajustan a volatilidad
+    grid_levels: 5
+    grid_spacing_pct: 1.0
+    range_reset_hours: 24
+    volatility_adjust: true
+  macd_rsi:
+    amount_per_trade: 10
+    atr_period: 14
+    description: Confluencia MACD + RSI para entradas de alta calidad
+    macd_fast: 12
+    macd_signal: 9
+    macd_slow: 26
+    rsi_buy_level: 40
+    rsi_period: 14
+    rsi_sell_level: 60
+    stop_atr_mult: 2.0
+    tp_atr_mult: 3.0
+    trend_ema: 100
+    trend_filter: true
+  mean_reversion:
+    amount_per_trade: 5
+    cooldown_bars: 5
+    description: Compra cuando el precio se aleja de la media, vende al volver
+    ema_period: 20
+    grid_levels: 3
+    max_loss_pct: 5.0
+    time_exit_bars: 30
+    window: 4h
+    z_score_entry: -1.5
+    z_score_exit: 0.5
+  momentum_burst:
+    amount_per_trade: 8
+    atr_period: 14
+    description: Captura explosiones de precio — long/short en ambas direcciones
+    rsi_period: 14
+    stop_atr_mult: 2.0
+    surge_pct: 1.5
+    time_exit_bars: 12
+    trailing_atr_mult: 1.0
+    vol_mult: 2.0
+  rsi_mean_revert:
+    amount_per_trade: 5
+    confirmation_bars: 2
+    description: Compra en RSI oversold, vende en RSI overbought
+    max_loss_pct: 4.0
+    rsi_overbought: 75
+    rsi_oversold: 25
+    rsi_period: 14
+  scalping:
+    amount_per_trade: 10
+    atr_period: 7
+    bb_period: 14
+    bb_std: 2.0
+    description: Scalping con RSI + Bollinger Bands — muchas operaciones rapidas
+    ema_period: 50
+    rsi_period: 7
+    stop_atr_mult: 1.5
+    time_exit_bars: 8
+  threshold_rebalance:
+    check_interval: 4h
+    description: Rebalanceo cuando la allocation se desvía del target
+    min_trade_usd: 3
+    rebalance_threshold: 8.0
+    target_allocation:
+      BTC/USDT: 50
+      ETH/USDT: 30
+      SOL/USDT: 20
+  trend_following:
+    adx_period: 14
+    adx_threshold: 20.0
+    amount_per_trade: 10
+    atr_period: 14
+    atr_stop_mult: 2.0
+    description: Sigue la tendencia con filtro ADX y stops ATR
+    fast_ema: 21
+    slow_ema: 55
+    trailing_atr_mult: 3.0
+    trend_ema: 200
+  trend_following_ls:
+    adx_period: 14
+    adx_threshold: 20.0
+    amount_per_trade: 10
+    atr_period: 14
+    atr_stop_mult: 2.0
+    description: Trend following long/short — opera en ambas direcciones con futuros
+    fast_ema: 21
+    slow_ema: 55
+    trailing_atr_mult: 3.0
+    trend_ema: 200
+  supertrend:
+    description: Supertrend ATR-based trend indicator — muy popular en crypto
+    atr_period: 10
+    multiplier: 3.0
+    adx_period: 14
+    adx_threshold: 20.0
+    amount_per_trade: 10
+  vwap_bounce:
+    description: VWAP mean reversion — rebote desde bandas VWAP
+    vwap_period: 20
+    std_mult: 2.0
+    rsi_period: 14
+    atr_period: 14
+    stop_atr_mult: 1.5
+    time_exit_bars: 16
+    amount_per_trade: 10
+  stoch_rsi:
+    description: Stochastic RSI con filtro de tendencia EMA
+    rsi_period: 14
+    stoch_period: 14
+    smooth_k: 3
+    ema_trend: 50
+    atr_period: 14
+    stop_atr_mult: 2.0
+    time_exit_bars: 20
+    amount_per_trade: 15
+  ichimoku:
+    description: Ichimoku Cloud — sistema completo japonés de tendencia
+    tenkan_period: 9
+    kijun_period: 26
+    senkou_b_period: 52
+    amount_per_trade: 10
+  supertrend_pro:
+    description: Multi-timeframe Supertrend con filtro ADX — favorita institucional
+      2026
+    atr_fast: 7
+    mult_fast: 2.0
+    atr_slow: 21
+    mult_slow: 3.5
+    adx_period: 14
+    adx_threshold: 20.0
+    amount_per_trade: 10
+  funding_rate_arb:
+    description: Delta-neutral funding rate arbitrage — ingreso pasivo simulado
+    fast_ema: 20
+    slow_ema: 50
+    min_funding: 5.0e-05
+    exit_flip_bars: 3
+    take_profit_usd: 0.5
+    max_hold_bars: 168
+    entry_check_bars: 24
+    emergency_stop_pct: 5.0
+    amount_per_trade: 10
+
+  # ── Kraken Futures Strategies ──────────────────────────────────────────────
+  pullback:
+    description: "Compra pullbacks al EMA rápido dentro de una tendencia establecida"
+    fast_ema: 21
+    slow_ema: 50
+    rsi_period: 14
+    rsi_oversold: 35
+    rsi_overbought: 65
+    rsi_exit_long: 70
+    rsi_exit_short: 30
+    pullback_tolerance_pct: 1.5
+    vol_period: 20
+    vol_filter: true
+    atr_period: 14
+    stop_atr_mult: 2.0
+    tp_atr_mult: 3.5
+    max_bars_held: 40
+    amount_per_trade: 10
+    use_shorts: true
+
+  dual_thrust:
+    description: "Dual Thrust intraday — breakout de rango previo (day trading)"
+    lookback: 4
+    k_upper: 0.7
+    k_lower: 0.7
+    atr_period: 14
+    stop_atr_mult: 1.5
+    time_exit_bars: 12
+    amount_per_trade: 10
+    use_shorts: true
+    min_range_pct: 0.5
+
+  keltner_breakout:
+    description: "Keltner Channel breakout — rompimiento de banda ATR con pendiente EMA"
+    ema_period: 20
+    atr_period: 10
+    kc_mult: 2.0
+    slope_bars: 5
+    vol_period: 20
+    vol_mult: 1.3
+    vol_filter: true
+    rsi_period: 14
+    rsi_exit_long: 80
+    rsi_exit_short: 20
+    rsi_filter: true
+    stop_atr_mult: 2.0
+    tp_atr_mult: 4.0
+    max_bars_held: 50
+    amount_per_trade: 10
+    use_shorts: true
+
+testnet: true
+risk:
+  leverage: 6.0
+  max_concurrent_positions: 2
+  daily_loss_stop_pct: 3.0
+  use_futures: true
+  position_sizing: fixed
+  atr_stop_enabled: true
+  atr_stop_mult: 1.0
+  preset_id: scalper
+  max_drawdown_pct: 5.0
+portfolio:
+  enabled: false
+  initial_balance: 100
+  strategies:
+  - name: stoch_rsi
+    capital_pct: 40
+    pairs:
+    - BTC/USDT
+    - ETH/USDT
+  - name: trend_following
+    capital_pct: 30
+    pairs:
+    - SOL/USDT
+    - NEAR/USDT
+  - name: grid_dynamic
+    capital_pct: 30
+    pairs:
+    - ETH/USDT
+timeframe: 15m
+trend_filter:
+  enabled: true
+  strategy: ema_crossover
+  timeframe: 4h

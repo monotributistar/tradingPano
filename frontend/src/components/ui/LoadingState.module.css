@@ -1,0 +1,21 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  color: var(--muted);
+}
+
+.fullPage {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+
+.message {
+  font-size: 13px;
+  color: var(--muted);
+}

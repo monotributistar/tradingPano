@@ -1,0 +1,59 @@
+# Caddyfile — HTTPS reverse proxy for the trading bot
+# =====================================================
+#
+# Place this file on your VPS at: /etc/caddy/Caddyfile
+# (or wherever Caddy is configured to look)
+#
+# What it does:
+#   - Automatic HTTPS via Let's Encrypt (ZeroSSL fallback)
+#   - HTTP → HTTPS redirect (automatic in Caddy)
+#   - Proxies all traffic to the Docker frontend container on port 80
+#   - Frontend's nginx handles the /api/* → api:8000 routing internally
+#
+# Prerequisites:
+#   - Your domain's A record points to this VPS IP
+#   - Port 80 and 443 are open in the firewall (ufw allow 80/tcp && ufw allow 443/tcp)
+#   - Caddy installed:  sudo apt install -y caddy
+#   - Docker compose running with docker-compose.prod.yml
+
+# Replace trading.example.com with your actual domain:
+trading.example.com {
+
+    # Reverse proxy to the Docker frontend (nginx) on localhost:80
+    reverse_proxy localhost:80 {
+        # Forward real client IP so nginx logs are useful
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Recommended security headers (supplement those already set in nginx)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        # Remove server identification
+        -Server
+    }
+
+    # Compress responses (Caddy handles gzip/zstd natively)
+    encode gzip zstd
+
+    # Structured access logs
+    log {
+        output file /var/log/caddy/trading-access.log {
+            roll_size    50MiB
+            roll_keep    5
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# Optional: if you also want the Swagger docs accessible at a separate subdomain:
+# api.trading.example.com {
+#     reverse_proxy localhost:80 {
+#         header_up Host {http.request.host}
+#     }
+# }

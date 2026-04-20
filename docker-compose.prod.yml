@@ -1,0 +1,72 @@
+# docker-compose.prod.yml — VPS production overrides
+# =====================================================
+# Apply on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What this file changes vs the base:
+#   - API port NOT exposed to the host (only reachable inside Docker + via frontend proxy)
+#   - Frontend listens only on 127.0.0.1:80 (Caddy on the host handles HTTPS → :80)
+#   - All secrets injected from .env
+#   - Resource limits set (2 CPU, 2 GB RAM for the API)
+
+version: "3.9"
+
+services:
+
+  api:
+    # In production the API is NOT exposed directly to the internet.
+    # Traffic flows:  internet → Caddy:443 → Docker frontend:80 → /api/* → api:8000
+    ports: []               # overrides base compose (removes 8000 exposure)
+    expose:
+      - "8000"              # only visible inside the app-net Docker network
+
+    environment:
+      # ── Security ──────────────────────────────────────────────────────────
+      BOT_API_SECRET:   ${BOT_API_SECRET:?err}   # required — openssl rand -hex 32
+      # ── Exchange ──────────────────────────────────────────────────────────
+      EXCHANGE_API_KEY:    ${EXCHANGE_API_KEY:-}
+      EXCHANGE_API_SECRET: ${EXCHANGE_API_SECRET:-}
+      EXCHANGE_PASSPHRASE: ${EXCHANGE_PASSPHRASE:-}
+      EXCHANGE_NAME:       ${EXCHANGE_NAME:-bybit}
+      # ── Telegram ──────────────────────────────────────────────────────────
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID:   ${TELEGRAM_CHAT_ID:-}
+      # ── CORS ──────────────────────────────────────────────────────────────
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # ── Runtime ───────────────────────────────────────────────────────────
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATA_DIR:  /app/data
+      PYTHONPATH: /app
+      BOT_CONFIG_PATH: /app/crypto_bot/config.yaml
+
+    deploy:
+      resources:
+        limits:
+          cpus:   "1.5"
+          memory: "1536M"
+        reservations:
+          memory: "256M"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    # Bind only to localhost — Caddy on the host forwards to this port
+    ports:
+      - "127.0.0.1:80:80"
+
+    deploy:
+      resources:
+        limits:
+          cpus:   "0.25"
+          memory: "128M"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"

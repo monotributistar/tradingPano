@@ -1,0 +1,458 @@
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+
+.page {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; }
+}
+
+.left { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Status card ─────────────────────────────────────────────────────────────── */
+
+.statusCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.statusCrashed { border-color: var(--red) !important; }
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotGreen {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+
+.dotGray  { background: var(--muted); }
+.dotRed   { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.statusText { font-size: 16px; font-weight: 700; }
+
+.wsBadge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.statusDetails { display: flex; flex-direction: column; gap: 6px; }
+
+.equityBar {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+}
+.equityLabel { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+.equityValue { font-size: 18px; font-weight: 700; color: var(--green); }
+.equityMeta  { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+.stopBtn {
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.stopBtn:hover    { background: rgba(239,68,68,0.1); }
+.stopBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Live feeds ──────────────────────────────────────────────────────────────── */
+
+.feedCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feedTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.tradePill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.open  { color: var(--green); font-weight: 700; min-width: 48px; }
+.close { color: var(--red);   font-weight: 700; min-width: 48px; }
+
+.tradePair  { font-weight: 600; }
+.tradePrice { color: var(--muted); }
+.tradeTime  { color: var(--muted); margin-left: auto; font-size: 11px; }
+
+.pnlPos { color: var(--green); font-weight: 600; }
+.pnlNeg { color: var(--red);   font-weight: 600; }
+
+.eventRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.eventBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg3);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.evt_crash    { background: rgba(239,68,68,0.15);  color: var(--red);    }
+.evt_halt     { background: rgba(234,179,8,0.15);  color: var(--yellow); }
+.evt_watchdog { background: rgba(239,68,68,0.15);  color: var(--red);    }
+.evt_start    { background: rgba(34,197,94,0.15);  color: var(--green);  }
+.evt_resume   { background: rgba(59,130,246,0.15); color: var(--blue);   }
+
+.eventDetail {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* ── Config form card ────────────────────────────────────────────────────────── */
+
+.configCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Sections inside form ────────────────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.labelRow .label { flex: 1; }
+
+.allBtn {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.allBtn:hover { color: var(--text); border-color: var(--text); }
+
+/* ── Pair grid ───────────────────────────────────────────────────────────────── */
+
+.pairGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pairBtn {
+  padding: 5px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-variant-numeric: tabular-nums;
+}
+
+.pairBtnActive {
+  border-color: var(--blue);
+  color: var(--text);
+  background: rgba(59,130,246,0.12);
+}
+
+/* ── Strategy preview widget ─────────────────────────────────────────────────── */
+
+.stratPickBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s;
+}
+.stratPickBtn:hover { border-color: var(--accent); color: var(--text); }
+
+.stratPreview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.stratPreview:hover { border-color: var(--accent); }
+
+.stratInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stratName {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stratBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stratDesc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stratChangeBtn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.stratChangeBtn:hover {
+  background: rgba(99,102,241,0.1);
+  border-color: var(--accent);
+}
+
+/* ── Saved config list ───────────────────────────────────────────────────────── */
+
+.emptyConfigs {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--bg3);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  line-height: 1.6;
+}
+
+.configList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.cfgCard {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cfgCard:hover      { border-color: var(--accent); }
+.cfgCardSelected    { border-color: var(--blue) !important; background: rgba(59,130,246,0.07); }
+
+.cfgHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cfgName {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cfgCheck {
+  font-size: 14px;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.cfgBody { display: flex; flex-direction: column; gap: 6px; }
+
+.cfgRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.cfgRowLabel {
+  min-width: 68px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.cfgRowValue {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.cfgChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cfgChip {
+  padding: 2px 7px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cfgNotes {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ── Restore toggle ──────────────────────────────────────────────────────────── */
+
+.restoreRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.restoreRow input { cursor: pointer; accent-color: var(--accent); }
+
+.restoreHint {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 10px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+/* ── Start button ────────────────────────────────────────────────────────────── */
+
+.startBtn {
+  padding: 11px;
+  background: var(--blue);
+  border: none;
+  border-radius: 7px;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.startBtn:hover    { background: #2563eb; }
+.startBtn:disabled { opacity: 0.45; cursor: not-allowed; }

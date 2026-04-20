@@ -1,0 +1,133 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Investment Profile Presets
+# One-click configurations combining strategy + risk + pairs + timeframe
+# ═══════════════════════════════════════════════════════════════════════════
+
+presets:
+
+  # ─── 🛡 CONSERVATIVE — Capital preservation, passive income ──────────────
+  conservative:
+    label: "🛡 Conservative"
+    description: "Delta-neutral + low-volatility strategies. Priority is preserving capital."
+    target_apy: "5-15%"
+    max_drawdown_target: 5.0
+    recommended_capital_usd: 100
+    strategy: funding_rate_arb
+    pairs:
+      - BTC/USDT
+      - ETH/USDT
+    timeframe: 4h
+    period: 6m
+    leverage: 1.0   # no leverage
+    amount_per_trade: 8
+    max_concurrent_positions: 2
+    daily_loss_stop_pct: 2.0
+    use_futures: false
+    risk:
+      position_sizing: fixed
+      atr_stop_enabled: true
+      atr_stop_mult: 1.5
+
+  # ─── ⚖️ BALANCED — Proven trend strategies, moderate risk ────────────────
+  balanced:
+    label: "⚖️ Balanced"
+    description: "Trend following with strict stops. Good risk/reward balance."
+    target_apy: "20-40%"
+    max_drawdown_target: 15.0
+    recommended_capital_usd: 100
+    strategy: trend_following_ls
+    pairs:
+      - ETH/USDT
+      - NEAR/USDT
+      - DOT/USDT
+    timeframe: 4h
+    period: 6m
+    leverage: 1.5
+    amount_per_trade: 10
+    max_concurrent_positions: 3
+    daily_loss_stop_pct: 5.0
+    use_futures: true  # allows shorts
+    risk:
+      position_sizing: atr_volatility
+      atr_stop_enabled: true
+      atr_stop_mult: 2.0
+
+  # ─── 🔥 AGGRESSIVE — Maximize return, higher drawdowns expected ──────────
+  aggressive:
+    label: "🔥 Aggressive"
+    description: "Momentum + stoch_rsi on strongest trending pairs. High reward, high drawdown."
+    target_apy: "40-100%"
+    max_drawdown_target: 30.0
+    recommended_capital_usd: 100
+    strategy: stoch_rsi
+    pairs:
+      - NEAR/USDT
+      - ETH/USDT
+      - BTC/USDT
+    timeframe: 4h
+    period: 6m
+    leverage: 2.5  # capped at 3x — safety first with small capital
+    amount_per_trade: 15
+    max_concurrent_positions: 3
+    daily_loss_stop_pct: 8.0
+    use_futures: true
+    risk:
+      position_sizing: atr_volatility
+      atr_stop_enabled: true
+      atr_stop_mult: 2.0
+
+  # ─── ⚡ SCALPER — High-frequency small profits ──────────────────────────
+  scalper:
+    label: "⚡ Scalper"
+    description: "Many small fast trades on 1h bars. Tight stops, high frequency."
+    target_apy: "15-35%"
+    max_drawdown_target: 10.0
+    recommended_capital_usd: 100
+    strategy: momentum_burst
+    pairs:
+      - ETH/USDT
+      - NEAR/USDT
+    timeframe: 1h
+    period: 3m
+    leverage: 1.5
+    amount_per_trade: 8
+    max_concurrent_positions: 2
+    daily_loss_stop_pct: 3.0
+    use_futures: true
+    risk:
+      position_sizing: fixed
+      atr_stop_enabled: true
+      atr_stop_mult: 1.0  # tight stops for scalping
+
+  # ─── 🎯 SWING — Positional trades, hold days to weeks ───────────────────
+  swing:
+    label: "🎯 Swing"
+    description: "Ichimoku / Supertrend on daily bars. Hold days to weeks."
+    target_apy: "20-50%"
+    max_drawdown_target: 20.0
+    recommended_capital_usd: 100
+    strategy: supertrend_pro
+    pairs:
+      - BTC/USDT
+      - ETH/USDT
+      - NEAR/USDT
+    timeframe: 1d
+    period: 1y
+    leverage: 1.5
+    amount_per_trade: 12
+    max_concurrent_positions: 3
+    daily_loss_stop_pct: 5.0
+    use_futures: true
+    risk:
+      position_sizing: atr_volatility
+      atr_stop_enabled: true
+      atr_stop_mult: 2.5
+
+
+# ─── Position sizing helpers (used by engine) ──────────────────────────────
+position_sizing:
+  fixed:
+    description: Always trade the same USD amount (amount_per_trade)
+  atr_volatility:
+    description: Size inversely proportional to ATR. risk = capital * risk_pct / atr
+    risk_per_trade_pct: 1.0  # risk 1% of capital per trade

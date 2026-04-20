@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.egg
+
+# Environment & secrets
+.env
+!.env.example
+*.key
+*.pem
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Data & DB
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Claude session files (local only)
+.claude/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

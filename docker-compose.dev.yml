@@ -1,0 +1,86 @@
+version: "3.9"
+
+# ── Development compose ───────────────────────────────────────────────────────
+# Source code is bind-mounted; both services reload automatically on save.
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Access:
+#   Frontend (Vite dev server + HMR) →  http://localhost:5173
+#   Backend  (FastAPI + auto-reload) →  http://localhost:8000
+#   API docs                         →  http://localhost:8000/docs
+
+networks:
+  app-dev-net:
+    driver: bridge
+
+services:
+  # ── Backend API — hot reload ─────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile.dev
+    container_name: trading-api-dev
+    restart: unless-stopped
+    networks: [app-dev-net]
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    volumes:
+      # Bind-mount all source dirs so uvicorn --reload picks up changes
+      - ./api:/app/api
+      - ./crypto_bot:/app/crypto_bot
+      - ./data:/app/data
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+
+    environment:
+      PYTHONPATH: /app
+      BOT_CONFIG_PATH: /app/crypto_bot/config.yaml
+      BOT_API_SECRET:      ${BOT_API_SECRET:?BOT_API_SECRET is required — copy .env.example to .env}
+      EXCHANGE_API_KEY:    ${EXCHANGE_API_KEY:-}
+      EXCHANGE_API_SECRET: ${EXCHANGE_API_SECRET:-}
+      EXCHANGE_PASSPHRASE: ${EXCHANGE_PASSPHRASE:-}
+      EXCHANGE_NAME:       ${EXCHANGE_NAME:-bybit}
+      TELEGRAM_BOT_TOKEN:  ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID:    ${TELEGRAM_CHAT_ID:-}
+      LOG_LEVEL:           ${LOG_LEVEL:-DEBUG}
+
+    # Simple healthcheck so the frontend can wait for it
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout:  5s
+      start_period: 15s
+      retries: 5
+
+  # ── Frontend — Vite dev server with HMR ─────────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: trading-frontend-dev
+    working_dir: /app
+    restart: unless-stopped
+    networks: [app-dev-net]
+
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+
+    volumes:
+      # Bind-mount the entire frontend so Vite watches for changes
+      - ./frontend:/app
+      # Separate anonymous volume for node_modules so the host copy
+      # doesn't shadow the container's installed packages.
+      - /app/node_modules
+
+    environment:
+      # Tell Vite to proxy /api → api container (Docker service name)
+      VITE_API_TARGET: "http://api:8000"
+
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+    depends_on:
+      api:
+        condition: service_healthy

@@ -1,0 +1,25 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.sm { font-size: 10px; padding: 1px 6px; }
+.md { font-size: 11px; padding: 2px 8px; }
+
+.green  { background: rgba(34,197,94,0.15);  color: var(--green); }
+.red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+.yellow { background: rgba(234,179,8,0.15);  color: var(--yellow); }
+.blue   { background: rgba(59,130,246,0.15); color: var(--blue); }
+.gray   { background: rgba(136,146,164,0.15);color: var(--muted); }
+.purple { background: rgba(153,69,255,0.15); color: var(--sol); }
+
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}

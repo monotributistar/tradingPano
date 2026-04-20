@@ -1,0 +1,177 @@
+/* ── Panel wrapper ──────────────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Header row ─────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ── Source filter ──────────────────────────────────────────────────────────── */
+
+.filterGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.filterBtn {
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  transition: all 0.12s;
+}
+
+.filterBtn:hover {
+  color: var(--text);
+  border-color: var(--blue);
+}
+
+.filterActive {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+/* ── Placeholder (empty / loading) ─────────────────────────────────────────── */
+
+.placeholder {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg3);
+}
+
+.colStrategy { min-width: 130px; }
+
+.colNum {
+  text-align: right;
+  min-width: 70px;
+}
+
+.strategyName {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.unit {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.muted { color: var(--muted); }
+
+/* ── Source badge ───────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.badgePaper {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue);
+}
+
+.badgeLive {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--red);
+}
+
+.badgeMixed {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+}
+
+/* ── Win/loss spark bar ─────────────────────────────────────────────────────── */
+
+.winBar {
+  width: 56px;
+  height: 6px;
+  background: rgba(239, 68, 68, 0.25);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.winBarFill {
+  height: 100%;
+  background: var(--green, #22c55e);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}

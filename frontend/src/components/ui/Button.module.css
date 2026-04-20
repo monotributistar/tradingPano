@@ -1,0 +1,37 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s, transform 0.08s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+
+/* Sizes */
+.sm  { height: 28px; padding: 0 10px; font-size: 12px; }
+.md  { height: 34px; padding: 0 14px; font-size: 13px; }
+.lg  { height: 42px; padding: 0 20px; font-size: 15px; }
+
+/* Variants */
+.primary   { background: var(--accent); color: #fff; }
+.primary:not(:disabled):hover { opacity: 0.88; }
+
+.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.secondary:not(:disabled):hover { background: var(--bg3); }
+
+.danger    { background: var(--red); color: #fff; }
+.danger:not(:disabled):hover { opacity: 0.88; }
+
+.ghost     { background: transparent; color: var(--muted); border: none; }
+.ghost:not(:disabled):hover { color: var(--text); background: var(--bg3); }
+
+.iconLeft, .iconRight { display: flex; align-items: center; line-height: 1; }
+.label { line-height: 1; }
