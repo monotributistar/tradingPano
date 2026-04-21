@@ -1,5 +1,6 @@
 .PHONY: install install-api install-frontend \
-        api frontend dev test build \
+        api frontend dev build \
+        test test-unit test-api test-cov \
         db-upgrade db-downgrade db-revision db-history db-current \
         docker-build docker-up docker-down docker-restart docker-logs \
         docker-shell-api docker-shell-frontend docker-clean \
@@ -26,8 +27,30 @@ dev:
 	@echo "Starting API + Frontend in parallel…"
 	$(MAKE) -j2 api frontend
 
+## Run full test suite (unit + API integration)
 test:
-	cd crypto_bot && python3 -m pytest tests/ -v
+	python3 -m pytest crypto_bot/tests/ tests/ -v
+
+## Run strategy unit tests only (fast, no network)
+test-unit:
+	python3 -m pytest crypto_bot/tests/ -v -m "not slow"
+
+## Run API integration tests only
+test-api:
+	python3 -m pytest tests/api/ -v -m api
+
+## Run tests with HTML coverage report → htmlcov/index.html
+test-cov:
+	python3 -m pytest crypto_bot/tests/ tests/ \
+	  --cov=crypto_bot/strategies \
+	  --cov=api/routers \
+	  --cov-report=html \
+	  --cov-report=term-missing \
+	  -v
+
+## TypeScript type check (0 errors required)
+typecheck:
+	cd frontend && npx tsc --noEmit
 
 build:
 	cd frontend && npm run build

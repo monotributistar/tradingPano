@@ -1,50 +1,63 @@
 # Architecture
 
-## Stack
+This document describes the system design, data flows, component contracts, and key decisions in TradingPano.
+
+---
+
+## System Overview
 
 ```
-trading-claude/
-├── frontend/               React 18 + TypeScript + Vite (port 5173)
-│   └── src/
-│       ├── api/client.ts   Axios client + all TypeScript interfaces (contracts)
-│       ├── pages/          Route-level components (Backtests, Dashboard, etc.)
-│       └── components/     Reusable UI (MetricsCard, PriceChart, ValidationPanel…)
-│
-├── api/                    FastAPI (Python 3.11, port 8000)
-│   ├── main.py             App factory, strategy registry, config loader
-│   ├── routers/            One file per resource domain
-│   │   ├── backtests.py    Job lifecycle + walk-forward + Monte Carlo
-│   │   ├── strategies.py   Strategy catalog with metadata
-│   │   ├── trades.py       Trade history
-│   │   ├── provider.py     Exchange connectivity + OHLCV
-│   │   ├── presets.py      Investment profiles
-│   │   ├── bot.py          Live/paper engine control
-│   │   └── wallet.py       Portfolio snapshots
-│   ├── schemas/            Pydantic request/response models (contracts)
-│   │   ├── backtest.py     BacktestCreate, BacktestMetrics, BacktestJobResponse
-│   │   ├── bot.py
-│   │   └── trade.py
-│   └── db/
-│       ├── models.py       SQLAlchemy ORM models
-│       └── engine.py       SQLite engine + session factory
-│
-├── crypto_bot/             Core trading engine
-│   ├── strategies/         19 strategy implementations (all extend BaseStrategy)
-│   │   ├── base.py         Abstract base + metadata contract
-│   │   └── *.py            Individual strategies
-│   ├── backtester/
-│   │   ├── runner.py       Bar-by-bar simulation engine
-│   │   ├── data_fetcher.py OHLCV downloader with ccxt + disk cache
-│   │   ├── metrics.py      Performance metric calculations
-│   │   ├── walk_forward.py Out-of-sample validation
-│   │   └── monte_carlo.py  Trade-shuffle simulation
-│   ├── engine/             Live and paper trading engines
-│   └── risk_manager.py     Position sizing, daily loss stop
-│
-└── docs/                   This documentation
-    ├── api-contracts.md    All endpoint contracts + TypeScript types
-    ├── architecture.md     This file
-    └── strategies.md       Strategy catalog with metadata table
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Browser / Client                           │
+│                   React 18 + TypeScript + Vite                      │
+│       pages/  components/  api/client.ts  lib/indicators.ts         │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │  REST (axios)  +  WebSocket
+                               │  X-API-Key header
+┌──────────────────────────────▼──────────────────────────────────────┐
+│                         FastAPI Server                              │
+│                     api/  (port 8000)                               │
+│                                                                     │
+│  ┌────────────┐  ┌─────────────┐  ┌────────────┐  ┌─────────────┐ │
+│  │  routers/  │  │  schemas/   │  │    auth    │  │  ws_manager │ │
+│  │ (1 per     │  │ (Pydantic   │  │ (X-API-Key │  │ (broadcast  │ │
+│  │ resource)  │  │  contracts) │  │  header)   │  │  to clients)│ │
+│  └─────┬──────┘  └─────────────┘  └────────────┘  └─────────────┘ │
+│        │                                                            │
+│  ┌─────▼──────────────────────────────────────────────────────┐    │
+│  │                      bot_manager.py                        │    │
+│  │  Start/stop bot thread, track status, broadcast events     │    │
+│  └─────┬──────────────────────────────────────────────────────┘    │
+│        │                                                            │
+│  ┌─────▼──────────────────────────────────────────────────────┐    │
+│  │                     SQLite + SQLAlchemy                    │    │
+│  │  trades · backtest_jobs · wallet_snapshots ·               │    │
+│  │  bot_state · bot_events · strategy_configs                 │    │
+│  └────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │  Python import (same process)
+┌──────────────────────────────▼──────────────────────────────────────┐
+│                       crypto_bot/                                   │
+│                  Core Trading Engine (pure Python)                  │
+│                                                                     │
+│  ┌───────────────────┐   ┌──────────────────┐   ┌───────────────┐  │
+│  │   strategies/     │   │   backtester/    │   │   engine/     │  │
+│  │  22 strategies    │   │  runner          │   │  paper + live │  │
+│  │  base.py contract │   │  data_fetcher    │   │               │  │
+│  │  Signal enum      │   │  metrics         │   │               │  │
+│  │  TradeSignal      │   │  walk_forward    │   │               │  │
+│  └─────────┬─────────┘   │  monte_carlo     │   └───────┬───────┘  │
+│            │             └──────────────────┘           │          │
+│  ┌─────────▼──────────────────────────────────────────────────┐    │
+│  │                    risk_manager.py                         │    │
+│  │  Leverage · position sizing · daily loss stop · max DD     │    │
+│  └────────────────────────────────────────────────────────────┘    │
+│                                │                                    │
+│  ┌─────────────────────────────▼──────────────────────────────┐    │
+│  │              ccxt (exchange connectivity)                  │    │
+│  │  Bybit · KuCoin · OKX · Gate · Kraken · Binance            │    │
+│  └────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -52,141 +65,260 @@ trading-claude/
 ## Request Flow — Backtest
 
 ```
-Browser
-  │
-  ├─ POST /api/backtests { strategy, pair, period, timeframe }
-  │     │
-  │     ├─ FastAPI validates BacktestCreate (Pydantic)
-  │     │   ├─ strategy exists in registry?
-  │     │   └─ timeframe in SUPPORTED_TIMEFRAMES?
-  │     │
-  │     ├─ INSERT backtest_jobs (status=pending)
-  │     └─ BackgroundTask: _run_backtest_worker(job_id, ...)
-  │           │
-  │           ├─ UPDATE status=running
-  │           ├─ DataFetcher.fetch(pair, timeframe, period)   [disk cache]
-  │           │   └─ ccxt.fetch_ohlcv() with exchange fallback
-  │           ├─ BacktestRunner.run(strategy, candles)
-  │           │   └─ bar-by-bar: strategy.on_candle() → Signal → execute trade
-  │           ├─ compute_metrics(equity_curve, trades)
-  │           ├─ INSERT trades (all round-trips)
-  │           └─ UPDATE status=done, metrics, equity_curve, equity_timestamps
-  │
-  ├─ GET /api/backtests/{id}   (poll until status=done)
-  ├─ GET /api/provider/ohlcv/{pair}?timeframe=4h&period=6m   (price chart)
-  └─ GET /api/trades?backtest_job_id={id}                     (trade markers)
+Browser                  FastAPI                   crypto_bot
+   │                        │                          │
+   │  POST /api/backtests   │                          │
+   │ ─────────────────────► │                          │
+   │                        │  Create BacktestJob row  │
+   │                        │  status="pending"        │
+   │  201 BacktestJob       │                          │
+   │ ◄───────────────────── │                          │
+   │                        │                          │
+   │                        │  Thread: BacktestRunner  │
+   │                        │ ─────────────────────── ►│
+   │                        │                          │  DataFetcher.fetch()
+   │                        │                          │  (OHLCV from ccxt or cache)
+   │                        │                          │  ┌──────────────────────┐
+   │                        │                          │  │ Bar-by-bar loop       │
+   │                        │                          │  │ strategy.on_candle()  │
+   │                        │                          │  │ risk_manager.check()  │
+   │                        │                          │  │ log trade to DB       │
+   │                        │                          │  └──────────────────────┘
+   │                        │                          │  compute_metrics()
+   │                        │  Update job: status="done"│
+   │                        │ ◄────────────────────────│
+   │                        │  write metrics + equity   │
+   │  GET /api/backtests/42 │                          │
+   │ ─────────────────────► │                          │
+   │  200 + metrics         │                          │
+   │ ◄───────────────────── │                          │
 ```
 
 ---
 
-## Request Flow — Walk-Forward Validation
+## Request Flow — Live Bot
 
 ```
-POST /api/backtests/{id}/walk-forward?n_segments=5
-  │
-  ├─ Load job from DB (strategy, pair, period)
-  ├─ DataFetcher.fetch(pair, timeframe, period)
-  ├─ Split into N equal slices (last 20% of each = OOS)
-  └─ For each slice: BacktestRunner.run() → segment metrics
-      └─ Aggregate: avg_return, std, consistency_score, avg_sharpe
+Browser             FastAPI/bot_manager          crypto_bot/engine
+   │                        │                          │
+   │  POST /api/bot/start   │                          │
+   │ ─────────────────────► │                          │
+   │                        │  Thread: PaperEngine     │
+   │                        │ ────────────────────────►│
+   │  200 {started}         │                          │  Every N seconds:
+   │ ◄───────────────────── │                          │  fetch_ohlcv() → ccxt
+   │                        │                          │  strategy.on_candle()
+   │                        │                          │  risk_manager.approve()
+   │                        │                          │  execute_order() (paper/live)
+   │                        │                          │  log trade → DB
+   │                        │                          │  snapshot wallet → DB
+   │                        │  ws broadcast: trade     │
+   │  WS: trade event       │ ◄────────────────────────│
+   │ ◄───────────────────── │                          │
 ```
 
 ---
 
-## Strategy Contract
+## Component Contracts
 
-Every strategy implements `BaseStrategy`:
+### Strategy Contract
+
+Every strategy must satisfy this interface (see [`docs/strategy-development.md`](strategy-development.md)):
 
 ```python
-class MyStrategy(BaseStrategy):
-    name = "my_strategy"
-    description = "One-line description"
+class BaseStrategy(ABC):
+    # Required class-level metadata
+    name: str
+    description: str
+    market_type: str   # "trending" | "ranging" | "both"
+    risk_profile: dict
 
-    # ── Metadata (used by UI + recommendation engine) ──────────────────
-    ideal_timeframes = ["1h", "4h"]
-    min_period = "1m"
-    market_type = "trending"      # "trending" | "ranging" | "both"
-    trade_frequency = "medium"    # "high" (scalping) | "medium" | "low"
-    min_liquidity = "any"         # "high" | "medium" | "any"
+    @abstractmethod
+    def initialize(self, config: dict) -> None: ...
 
-    # ── Required methods ───────────────────────────────────────────────
-    def initialize(self, config: dict) -> None:
-        """Load params from config.yaml strategy section."""
+    @abstractmethod
+    def on_candle(
+        self,
+        pair: str,
+        candles: pd.DataFrame,   # OHLCV, columns: open high low close volume
+        position: Optional[dict],
+    ) -> TradeSignal: ...
 
-    def on_candle(self, pair, candles: pd.DataFrame, position) -> TradeSignal:
-        """Return signal for this bar."""
+    @abstractmethod
+    def get_params(self) -> dict: ...
 
-    def get_params(self) -> dict:
-        """Return current param values for logging."""
+    @abstractmethod
+    def reset(self) -> None: ...
 
-    # ── Optional ───────────────────────────────────────────────────────
-    def get_param_grid(self) -> dict:
-        """Search space for optimizer, e.g. {"rsi_period": [7, 14, 21]}"""
-
-    def reset(self) -> None:
-        """Reset state between backtest runs."""
+    # Optional — required for live trading resume
+    def save_state(self) -> dict: ...
+    def load_state(self, state: dict) -> None: ...
 ```
+
+**Signal types:** `BUY` · `SELL` · `SHORT` · `COVER` · `STOP_LOSS` · `TIME_EXIT` · `HOLD`
+
+### API Contract
+
+All API endpoints are typed via Pydantic schemas in `api/schemas/`. The TypeScript counterparts live in `frontend/src/api/client.ts`.
+
+When an API response schema changes:
+1. Update the Pydantic model
+2. Update the TypeScript interface
+3. Run `cd frontend && npx tsc --noEmit` — zero errors required
+
+Full API reference: [`docs/api-contracts.md`](api-contracts.md)
 
 ---
 
-## Database Schema
+## Data Models
 
-| Table | Key Columns |
-|-------|-------------|
-| `backtest_jobs` | id, strategy, pair, period, **timeframe**, status, metrics (JSON), equity_curve (JSON), params (JSON) |
-| `trades` | id, backtest_job_id (FK), type, pair, price, qty, fee, pnl, pnl_pct, timestamp |
-| `wallet_snapshots` | id, source, balance_usdt, positions_value, total_equity, positions (JSON), timestamp |
-| `bot_state` | id, mode, strategy, pairs (JSON), positions (JSON), is_active |
+```
+backtest_jobs
+  id, strategy, pair, timeframe, period, params
+  status (pending → running → done|error)
+  metrics (JSON), equity_curve (JSON)
+  created_at, started_at, finished_at
+      │
+      │ 1:M
+      ▼
+trades
+  id, source (paper|live|backtest), backtest_job_id
+  type (buy|sell|short|cover), pair, strategy
+  price, qty, fee, pnl, pnl_pct
+  reason, duration_bars, timestamp
+
+wallet_snapshots
+  id, source, balance_usdt, positions_value, total_equity
+  positions (JSON), timestamp
+
+bot_state          — persisted position state for resume
+  id, mode, strategy, pairs, positions (JSON)
+  strategy_state (JSON), is_active, saved_at
+
+bot_events         — immutable audit log
+  id, event_type, mode, strategy, pairs, detail
+  positions (JSON), occurred_at
+
+strategy_configs   — saved composable configs
+  id, name, execution_strategy, execution_timeframe
+  trend_filter_strategy, trend_filter_timeframe
+  risk_profile (JSON), pairs (JSON), notes
+  created_at, updated_at
+```
 
 ---
 
 ## OHLCV Caching
 
-`DataFetcher` caches downloaded candles to `data/cache/{pair}_{tf}_{period}.csv`.
+Historical candles are cached to disk to avoid re-fetching from the exchange on every backtest:
 
-| Period | Cache TTL |
-|--------|-----------|
-| ≤ 3m | 1 hour |
-| > 3m | 6 hours |
+```
+Cache key: {pair}_{timeframe}_{period}
+Cache location: crypto_bot/data/cache/
+Cache format: CSV (pandas)
 
-To bypass: `fetcher.fetch(pair, tf, period, force=True)` (not exposed in the API currently).
+Flow:
+  DataFetcher.fetch(pair, tf, period)
+    → check cache file exists AND mtime < 1h
+    → HIT:  read from CSV
+    → MISS: fetch from exchange, write CSV, return
+```
+
+Cache TTL: **1 hour**. Manual invalidation: delete files in `crypto_bot/data/cache/`.
 
 ---
 
-## Exchange Fallback Chain
-
-When a timeframe or pair is not available on the configured exchange:
+## Exchange Connectivity
 
 ```
-Configured exchange (default: kucoin)
-  → okx
-  → gate
-  → kraken
-```
+ccxt exchange instance
+  └── fallback chain:
+      1. Exchange from config (EXCHANGE_NAME env var)
+      2. bybit (default)
+      3. kucoin (fallback for market scanner)
 
-Exchanges are tried in order; first success wins.
+Live/paper mode: uses EXCHANGE_API_KEY + EXCHANGE_API_SECRET
+Backtest mode:   uses public endpoints (no auth needed)
+Testnet:         enabled by default (config.yaml: testnet: true)
+```
 
 ---
 
 ## Frontend Architecture
 
 ```
-src/
-├── api/client.ts       Single source of truth for all TypeScript types + API calls
-├── pages/
-│   ├── Dashboard.tsx   Recent backtests overview, trade feed
-│   ├── Backtests.tsx   Submit form + job list sidebar + detail panel
-│   ├── Trades.tsx      Live trade table
-│   ├── Bot.tsx         Engine start/stop
-│   ├── Settings.tsx    Exchange config
-│   ├── Wallet.tsx      Portfolio tracker
-│   └── Presets.tsx     Investment profiles
-└── components/
-    ├── MetricsCard.tsx     10-stat performance grid
-    ├── EquityCurve.tsx     Recharts line chart with drawdown shading
-    ├── PriceChart.tsx      OHLCV line + trade markers (triangles)
-    ├── TradeTable.tsx      Sortable trade list
-    └── ValidationPanel.tsx Walk-forward + Monte Carlo controls + charts
+App.tsx
+├── Layout (nav, auth gate)
+└── Routes
+    ├── /               Dashboard.tsx
+    ├── /backtests      Backtests.tsx
+    ├── /bot            BotControl.tsx
+    ├── /trades         Trades.tsx
+    ├── /strategies     StrategyEngine.tsx
+    ├── /market         Market.tsx
+    ├── /wallet         Wallet.tsx
+    ├── /portfolio      Portfolio.tsx
+    ├── /presets        Presets.tsx
+    └── /settings       Settings.tsx
+
+Data layer:
+  api/client.ts         All API functions + TypeScript types
+  @tanstack/react-query  Async state management
+  useBotSocket.ts        WebSocket hook (live status + trades)
+
+UI components (components/ui/):
+  Alert · Badge · Button · Card · DataTable · DetailRow
+  EmptyState · Input · LoadingState · Modal · PageHeader
+  ProgressBar · SectionHeader · Select · Spinner · StatCard
+  TabBar · Textarea · Toast · Tooltip
+
+Chart components:
+  PriceChart.tsx         OHLCV candles + indicator overlays + oscillator
+  EquityCurve.tsx        Equity curve area chart
+  lib/indicators.ts      Pure math: EMA, SMA, RSI, MACD, BB, Supertrend, VWAP
+  lib/strategyIndicators.ts  Strategy → indicator map (22 strategies)
 ```
 
-Data fetching uses **TanStack Query** with auto-refetch (3s for job list, 2s for in-progress jobs).
+---
+
+## Authentication
+
+Simple shared-secret API key model:
+
+1. Set `BOT_API_SECRET` in `.env`
+2. All requests must include `X-API-Key: <value>` header
+3. `api/auth.py → require_api_key` dependency validates it via constant-time comparison
+4. WebSocket auth uses `?api_key=<value>` query parameter
+
+This is designed for single-user self-hosted deployments. For multi-user, replace `require_api_key` with JWT auth.
+
+---
+
+## Logging Architecture
+
+See [`docs/logging.md`](logging.md) for the full guide.
+
+```
+logging.getLogger(__name__)     # All modules use named loggers
+    │
+    ├── RotatingFileHandler → data/bot.log (10 MB × 5 files)
+    └── RichHandler (console)  → colored, with tracebacks
+
+Log level: from LOG_LEVEL env var (default: INFO)
+Format:    %(asctime)s [%(levelname)s] %(name)s: %(message)s
+```
+
+---
+
+## Key Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| SQLite as database | Single-user, self-hosted. No external DB service to manage. Alembic handles migrations cleanly. |
+| crypto_bot as separate importable package | The core engine can be used without FastAPI — CLI backtesting, unit tests, and the API all import the same code. |
+| Strategies as pure Python classes | No framework coupling. Each strategy is isolated, testable with synthetic DataFrames, and hot-swappable. |
+| Strategy parameters via YAML + DB | YAML for global defaults; StrategyConfig DB records for per-run overrides. No hardcoded values. |
+| Backtest in background thread | Keeps the API responsive. The client polls `GET /backtests/{id}` until status changes. |
+| Pydantic v2 schemas as contracts | Single source of truth for request/response shapes. TypeScript interfaces in `client.ts` are manually maintained mirrors — `tsc --noEmit` enforces correctness. |
+| ccxt for exchange connectivity | Unified API across 100+ exchanges. Rate limiting, retry, and error handling built-in. |
+| React Query for data fetching | Handles caching, background refetch, loading states, and error boundaries without manual useEffect. |

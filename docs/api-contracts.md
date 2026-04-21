@@ -1,450 +1,543 @@
 # API Contracts
 
 > Interactive docs: **http://localhost:8000/docs** (Swagger UI)  
-> Alternative: **http://localhost:8000/redoc** (ReDoc)  
-> Base URL: `http://localhost:8000/api`
->
-> **Version:** 2.1.0  
-> **Last updated:** 2026-04-17
+> Alternative: **http://localhost:8000/redoc** (ReDoc)
+
+**Base URL:** `http://localhost:8000` (development) · `https://yourdomain.com` (production)  
+**API prefix:** all endpoints under `/api/`  
+**Version:** 3.0.0
 
 ---
 
 ## Authentication
 
-All endpoints **except** `GET /api/health` require an API key delivered via the `X-API-Key` header.
+All endpoints except `/api/health` and `/api/auth/login` require:
 
-```
+```http
 X-API-Key: <BOT_API_SECRET>
 ```
 
-### Setup
-
-1. Generate a secret:
-   ```bash
-   openssl rand -hex 32
-   # → e.g. a3f2c1d8e0b4...
-   ```
-2. Add it to `.env`:
-   ```
-   BOT_API_SECRET=a3f2c1d8e0b4...
-   ```
-3. In the browser app — click **🔑** in the header and paste the key. It is stored in `localStorage` and sent automatically with every request.
-
-### Errors
-
-| Code | Meaning |
-|------|---------|
-| `403 Forbidden` | Key is missing or incorrect |
-| `500 Internal Server Error` | `BOT_API_SECRET` env var is not set on the server |
-
-### curl example
-
-```bash
-curl -H "X-API-Key: $BOT_API_SECRET" http://localhost:8000/api/bot/status
+Missing or wrong key → `403 Forbidden`:
+```json
+{"detail": "Not authenticated"}
 ```
 
 ---
 
-## Health (public — no auth)
+## Common Error Shapes
 
-### `GET /api/health`
-
-Lightweight liveness probe used by Docker and nginx healthchecks.
-
-**Response**
 ```json
-{ "status": "ok", "version": "2.1.0" }
+// 404
+{"detail": "Backtest 42 not found"}
+
+// 422 Validation error
+{
+  "detail": [{"loc": ["body", "strategy"], "msg": "field required", "type": "value_error.missing"}]
+}
+
+// 409 Conflict
+{"detail": "Bot is already running"}
+```
+
+---
+
+## Health
+
+### `GET /api/health` — public
+
+```json
+{"status": "ok", "version": "3.0.0"}
+```
+
+---
+
+## Auth
+
+### `POST /api/auth/login` — public
+
+**Body:** `{"api_key": "your-key"}`  
+**200:** `{"authenticated": true}`  
+**403:** `{"detail": "Invalid API key"}`
+
+---
+
+## Strategies
+
+### `GET /api/strategies`
+
+Returns the full 22-strategy catalog.
+
+**200:**
+```json
+[
+  {
+    "name": "ema_crossover",
+    "description": "Golden/death cross momentum strategy",
+    "ideal_timeframes": ["1h", "4h", "1d"],
+    "min_period": "2m",
+    "market_type": "trending",
+    "trade_frequency": "medium",
+    "min_liquidity": "any",
+    "suitable_timeframes": ["1h", "4h"],
+    "suitable_market_conditions": ["trending"],
+    "recommended_leverage": 2.0,
+    "max_leverage": 8.0,
+    "risk_profile": {
+      "stop_loss_pct": 2.0,
+      "take_profit_pct": 5.0,
+      "position_size_pct": 5.0
+    },
+    "params": {"fast_ema": 9, "slow_ema": 21},
+    "param_grid": {"fast_ema": [5, 9, 12], "slow_ema": [21, 26, 50]}
+  }
+]
 ```
 
 ---
 
 ## Backtests
 
-### `POST /api/backtests` — Submit a backtest job
+### `POST /api/backtests`
 
-Jobs run asynchronously. Returns `202 Accepted` immediately; poll `GET /api/backtests/{id}`.
+Submit a backtest job (async, runs in background thread).
 
-**Request body**
+**Body:**
 ```json
 {
-  "strategy": "stoch_rsi",
-  "pair":     "NEAR/USDT",
-  "period":   "6m",
-  "timeframe":"4h"
+  "strategy":  "ema_crossover",
+  "pair":      "BTC/USDT",
+  "timeframe": "1h",
+  "period":    "3m",
+  "params":    {}
 }
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `strategy` | string | **required** | Strategy key from `GET /strategies` |
-| `pair` | string | `"BTC/USDT"` | Trading pair (BASE/QUOTE) |
-| `period` | string | `"6m"` | History window — see valid values below |
-| `timeframe` | string | `"1h"` | Candle size — see valid values below |
+| Field | Type | Required | Values |
+|---|---|---|---|
+| `strategy` | string | ✅ | Any registered strategy name |
+| `pair` | string | ✅ | e.g. `"BTC/USDT"` |
+| `timeframe` | string | ✅ | `1m` `5m` `15m` `30m` `1h` `2h` `4h` `6h` `12h` `1d` `1w` |
+| `period` | string | ✅ | `1w` `2w` `1m` `2m` `3m` `6m` `9m` `1y` `18m` `2y` `3y` `4y` `5y` |
+| `params` | object | ❌ | Strategy parameter overrides |
 
-**Valid timeframes:** `15m` · `30m` · `1h` · `2h` · `4h` · `6h` · `12h` · `1d` · `1w`  
-**Valid periods:** `1w` · `2w` · `1m` · `2m` · `3m` · `6m` · `9m` · `1y` · `18m` · `2y` · `3y` · `4y` · `5y`
+**201 — BacktestJob:**
+```json
+{
+  "id": 42,
+  "strategy": "ema_crossover",
+  "pair": "BTC/USDT",
+  "timeframe": "1h",
+  "period": "3m",
+  "status": "pending",
+  "metrics": null,
+  "equity_curve": null,
+  "created_at": "2026-04-21T14:00:00Z"
+}
+```
 
-**Response** `202 Accepted` → `BacktestJob` (status = `"pending"`)
-
----
-
-### `GET /api/backtests` — List jobs
-
-**Query params:** `strategy`, `pair`, `limit` (default 50)  
-**Response:** `BacktestJob[]` ordered newest first
-
----
-
-### `GET /api/backtests/{id}` — Get single job
-
-**Response:** `BacktestJob` with full metrics and equity curve when done  
-**Error:** `404` if not found
-
----
-
-### `DELETE /api/backtests/{id}` — Delete job
-
-Also deletes all trade records for the job.  
-**Response:** `204 No Content`
+`status` progression: `pending` → `running` → `done` | `error`
 
 ---
 
-### `POST /api/backtests/{id}/walk-forward` — Walk-forward validation
+### `GET /api/backtests`
 
-Splits the job's pair/period into N out-of-sample segments and runs the strategy on each.
+**Query:** `strategy` · `pair` · `limit` (default 50)
 
-**Query params:**
-
-| Param | Default | Range | Description |
-|-------|---------|-------|-------------|
-| `n_segments` | `5` | 2–20 | Number of OOS slices |
-| `period` | job's period | — | Override data window |
-
-**Response:** `WalkForwardResult`
+**200:** Array of BacktestJob (includes `metrics` when `status=done`).
 
 ---
 
-### `POST /api/backtests/{id}/monte-carlo` — Monte Carlo simulation
+### `GET /api/backtests/{id}`
 
-Shuffles trade order N times to estimate the probability distribution of outcomes.
+**200:**
+```json
+{
+  "id": 42,
+  "status": "done",
+  "metrics": {
+    "total_trades": 48,
+    "win_rate_pct": 58.3,
+    "total_return_pct": 12.4,
+    "sharpe_ratio": 1.82,
+    "sortino_ratio": 2.14,
+    "max_drawdown_pct": 6.3,
+    "profit_factor": 1.74,
+    "avg_trade_pnl": 0.043,
+    "avg_win": 0.12,
+    "avg_loss": -0.06,
+    "best_trade": 0.41,
+    "worst_trade": -0.18,
+    "avg_holding_bars": 8.2
+  },
+  "equity_curve": [20.0, 20.15, 19.87],
+  "equity_timestamps": ["2026-01-01T00:00:00Z"]
+}
+```
 
-**Query params:**
-
-| Param | Default | Range | Description |
-|-------|---------|-------|-------------|
-| `n_runs` | `1000` | 1–100000 | Number of shuffled simulations |
-| `seed` | — | int | Optional random seed for reproducibility |
-
-**Response:** `MonteCarloResult`
+**404:** Job not found.
 
 ---
 
-## Strategies
+### `DELETE /api/backtests/{id}` → `204`
 
-### `GET /api/strategies` — List all strategies
+---
 
-**Response:** `Strategy[]`
+### `POST /api/backtests/{id}/walk-forward`
+
+**Query:** `n_segments` (default 5) · `period` (default `"1y"`)
+
+**200:**
+```json
+{
+  "segments": [
+    {
+      "train_start": "2025-01-01",
+      "train_end":   "2025-07-01",
+      "test_start":  "2025-07-01",
+      "test_end":    "2025-10-01",
+      "train_return_pct": 18.4,
+      "test_return_pct":   7.2,
+      "test_sharpe": 1.4
+    }
+  ],
+  "avg_test_return_pct": 7.2,
+  "consistency_pct": 80.0
+}
+```
+
+---
+
+### `POST /api/backtests/{id}/monte-carlo`
+
+**Query:** `n_runs` (default 500) · `seed` (default 42)
+
+**200:**
+```json
+{
+  "original_return_pct": 12.4,
+  "mean_return_pct":     10.8,
+  "median_return_pct":   11.1,
+  "std_return_pct":       3.2,
+  "percentile_5_pct":     4.5,
+  "percentile_95_pct":   17.2,
+  "probability_profit":  78.0,
+  "histogram": [{"bucket_pct": -5.0, "count": 3}]
+}
+```
 
 ---
 
 ## Trades
 
-### `GET /api/trades` — List trades
+### `GET /api/trades`
 
-**Query params:** `backtest_job_id`, `pair`, `strategy`, `source`, `type`, `limit` (default 100)  
-**Response:** `Trade[]`
+**Query:** `pair` · `strategy` · `source` (`paper`|`live`|`backtest`) · `type` (`buy`|`sell`|`short`|`cover`) · `backtest_job_id` · `limit` (default 200)
 
----
-
-## Provider (Market Data)
-
-### `GET /api/provider/ohlcv/{pair}` — OHLCV candles
-
-Uses DataFetcher with multi-exchange fallback and disk cache.
-
-**Query params:**
-
-| Param | Default | Description |
-|-------|---------|-------------|
-| `timeframe` | `"1h"` | Candle size |
-| `period` | `"3m"` | History window |
-| `limit` | `200` | Max candles (ignored when `period` is set) |
-
-**Response:** `OHLCVCandle[]`
-
----
-
-### `GET /api/provider/ticker/{pair}` — Live ticker
-
-**Response:** `Ticker`
-
----
-
-### `GET /api/provider/balance` — Account balance
-
-Requires API key.  
-**Response:** `{ total: Record<string,number>, free: Record<string,number> }`
-
----
-
-### `GET /api/provider/status` — Exchange config
-
-**Response:** `ProviderStatus`
-
----
-
-### `POST /api/provider/test` — Test connectivity
-
-**Response:** `ConnectionResult`
-
----
-
-### `PATCH /api/provider/config` — Update exchange config
-
-Persists to `config.yaml`. Accepts any subset of fields.
-
----
-
-## Presets
-
-### `GET /api/presets` → `Preset[]`
-### `POST /api/presets/{id}/apply` → `ApplyPresetResult`
-### `GET /api/presets/active/current` → active preset info
-
----
-
-## TypeScript Contracts
-
-### `BacktestJob`
-```typescript
-interface BacktestJob {
-  id: number;
-  strategy: string;
-  pair: string;
-  period: string;         // e.g. "6m"
-  timeframe: string;      // e.g. "4h"
-  status: "pending" | "running" | "done" | "error";
-  error_msg?: string;
-  metrics?: BacktestMetrics;
-  equity_curve?: number[];      // USDT portfolio value per bar
-  equity_timestamps?: string[]; // ISO 8601 UTC per bar
-  params?: Record<string, unknown>;
-  created_at: string;           // ISO 8601 UTC
-  started_at?: string;
-  finished_at?: string;
-}
-```
-
-### `BacktestMetrics`
-```typescript
-interface BacktestMetrics {
-  total_return_pct: number;       // e.g. 27.3 means +27.3%
-  final_capital: number;          // USDT
-  initial_capital: number;        // USDT
-  sharpe_ratio: number;
-  sortino_ratio: number;
-  max_drawdown_pct: number;       // positive value, e.g. 8.2 means -8.2%
-  max_drawdown_duration_bars?: number;
-  win_rate_pct: number;
-  profit_factor: number;          // >1 is profitable
-  total_trades: number;
-  avg_trade_duration_bars: number;
-  expectancy_usd: number;
-  capital_utilization_pct: number;
-  avg_win_usd?: number;
-  avg_loss_usd?: number;          // negative value
-}
-```
-
-### `Strategy`
-```typescript
-interface Strategy {
-  name: string;
-  description: string;
-  ideal_timeframes: string[];              // e.g. ["4h","1d"]
-  min_period: string;                      // e.g. "3m"
-  market_type: "trending"|"ranging"|"both";
-  trade_frequency: "high"|"medium"|"low";
-  min_liquidity: "high"|"medium"|"any";
-  params: Record<string, unknown>;
-  param_grid: Record<string, unknown[]>;
-}
-```
-
-### `OHLCVCandle`
-```typescript
-interface OHLCVCandle {
-  t: number;  // Unix milliseconds (UTC) — use new Date(t) or toISOString()
-  o: number;
-  h: number;
-  l: number;
-  c: number;
-  v: number;  // volume in base currency
-}
-```
-
-### `Trade`
-```typescript
-interface Trade {
-  id: number;
-  source: "backtest" | "paper" | "live";
-  backtest_job_id?: number;
-  type: "buy"|"sell"|"short"|"cover"|"sell_eod"|"cover_eod";
-  pair: string;
-  strategy?: string;
-  price: number;
-  qty: number;
-  fee: number;
-  pnl?: number;      // USDT, positive = profit
-  pnl_pct?: number;
-  reason?: string;
-  duration_bars?: number;
-  avg_cost?: number;
-  timestamp?: string; // ISO 8601 UTC (from the candle, not wall clock)
-  logged_at: string;
-}
-```
-
-### `WalkForwardResult`
-```typescript
-interface WalkForwardResult {
-  pair: string;
-  strategy: string;
-  n_segments: number;
-  segments: WalkForwardSegment[];
-  aggregate: {
-    avg_return_pct: number;
-    std_return_pct: number;
-    consistency_score: number; // 0–1, % of profitable segments
-    avg_sharpe: number;
-    worst_segment_return: number;
-    best_segment_return: number;
-    avg_max_drawdown_pct?: number;
-  };
-}
-```
-
-### `MonteCarloResult`
-```typescript
-interface MonteCarloResult {
-  n_runs: number;
-  original_return_pct: number;
-  mean_return_pct: number;
-  median_return_pct: number;
-  std_return_pct: number;
-  percentile_5_pct: number;
-  percentile_95_pct: number;
-  max_drawdown_distribution: { mean: number; median: number; percentile_95: number };
-  probability_profit: number;    // 0–100 (percentage, not fraction)
-  histogram: Array<{ bucket_pct: number; count: number }>;
-}
-```
-
----
-
-## Bot
-
-### `POST /api/bot/start` — Start trading
-
-**Request body**
-```json
-{
-  "mode":     "paper",
-  "strategy": "stoch_rsi",
-  "pairs":    ["BTC/USDT", "ETH/USDT"],
-  "restore":  false
-}
-```
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `mode` | string | `"paper"` | `"paper"` or `"live"` |
-| `strategy` | string | `"mean_reversion"` | Strategy key |
-| `pairs` | string[] | `["BTC/USDT"]` | Trading pairs |
-| `restore` | bool | `false` | Resume positions from last saved BotState. Pass `true` after a VPS reboot or manual stop with open positions. |
-
-**Response** `200`
-```json
-{ "ok": true, "detail": "paper bot started" }
-```
-
----
-
-### `POST /api/bot/stop` — Stop trading
-
-**Response** `200`
-```json
-{ "ok": true, "detail": "Bot stopped" }
-```
-
----
-
-### `GET /api/bot/status` — Current state
-
-**Response**
-```json
-{
-  "running":        true,
-  "crashed":        false,
-  "mode":           "paper",
-  "strategy":       "stoch_rsi",
-  "pairs":          ["BTC/USDT"],
-  "started_at":     "2026-04-17T10:00:00+00:00",
-  "uptime_seconds": 3600.5,
-  "error":          null
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `crashed` | `true` when the watchdog detected an unexpected thread death |
-| `uptime_seconds` | `null` when not running |
-| `error` | Last exception message if the thread crashed |
-
----
-
-### `GET /api/bot/history` — BotState snapshots
-
-Query: `limit` (default 20)
-
-Returns raw DB snapshots persisted after every candle.
-
----
-
-### `GET /api/bot/events` — Audit log
-
-Query: `limit` (default 50)
-
-Returns lifecycle events ordered most-recent first.
-
+**200:**
 ```json
 [
   {
-    "id":          1,
-    "event_type":  "start",
-    "mode":        "paper",
-    "strategy":    "stoch_rsi",
-    "pairs":       ["BTC/USDT"],
-    "detail":      "restore=False",
-    "positions":   {},
-    "occurred_at": "2026-04-17T10:00:00+00:00"
+    "id": 1,
+    "source": "paper",
+    "type": "buy",
+    "pair": "BTC/USDT",
+    "strategy": "ema_crossover",
+    "price": 42156.78,
+    "qty": 0.000237,
+    "fee": 0.004,
+    "pnl": null,
+    "pnl_pct": null,
+    "reason": "golden cross",
+    "duration_bars": null,
+    "timestamp": "2026-04-21T14:32:00Z"
   }
 ]
 ```
 
-**Event types:** `start` · `stop` · `crash` · `halt` · `resume` · `watchdog`
+---
+
+### `GET /api/trades/stats`
+
+**Query:** `source` · `strategy`
+
+**200:**
+```json
+{
+  "total_trades": 48,
+  "wins": 28,
+  "losses": 20,
+  "win_rate_pct": 58.3,
+  "total_pnl": 2.14,
+  "avg_pnl": 0.044,
+  "profit_factor": 1.74
+}
+```
 
 ---
 
-## Error Responses
+## Bot Control
 
-All errors return `{ "detail": "..." }`:
+### `POST /api/bot/start`
 
-| Code | Meaning |
-|------|---------|
-| `400` | Bad request / validation error (unknown strategy, invalid timeframe) |
-| `403` | Missing or invalid `X-API-Key` header |
-| `404` | Resource not found |
-| `409` | Conflict (bot already running, etc.) |
-| `500` | Internal server error (backtest crash, `BOT_API_SECRET` not set, etc.) |
-| `502` | Exchange connectivity error |
+**Body:**
+```json
+{
+  "mode":               "paper",
+  "strategy":           "ema_crossover",
+  "pairs":              ["BTC/USDT"],
+  "restore":            false,
+  "strategy_config_id": null
+}
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `mode` | string | `"paper"` | `"paper"` or `"live"` |
+| `strategy` | string | `"mean_reversion"` | Registered strategy name |
+| `pairs` | string[] | `["BTC/USDT"]` | Trading pairs |
+| `restore` | boolean | `false` | Resume from saved DB state |
+| `strategy_config_id` | int\|null | `null` | Override all from a saved StrategyConfig |
+
+**200:** `{"status": "started", "mode": "paper", "strategy": "ema_crossover"}`  
+**409:** Bot already running.  
+**404:** Strategy or config not found.
+
+---
+
+### `POST /api/bot/stop` → `{"status": "stopping"}`
+
+---
+
+### `GET /api/bot/status`
+
+**200:**
+```json
+{
+  "running": true,
+  "mode": "paper",
+  "strategy": "ema_crossover",
+  "pairs": ["BTC/USDT"],
+  "uptime_seconds": 3600,
+  "equity_usdt": 21.45,
+  "positions": {
+    "BTC/USDT": {"side": "long", "qty": 0.0005, "avg_cost": 42100.0}
+  },
+  "last_signal": "BUY",
+  "last_signal_at": "2026-04-21T14:00:00Z",
+  "ws_connected": true,
+  "strategy_config_id": null,
+  "strategy_config_name": null
+}
+```
+
+---
+
+### `GET /api/bot/history` — Query: `limit` (default 20)
+Array of status snapshots.
+
+### `GET /api/bot/events`
+
+```json
+[{
+  "id": 1,
+  "event_type": "start",
+  "mode": "paper",
+  "strategy": "ema_crossover",
+  "pairs": ["BTC/USDT"],
+  "detail": null,
+  "occurred_at": "2026-04-21T10:00:00Z"
+}]
+```
+
+`event_type`: `start` · `stop` · `crash` · `halt` · `resume` · `watchdog`
+
+---
+
+## Wallet
+
+### `GET /api/wallet/history` — Query: `source` · `limit`
+
+```json
+[{
+  "id": 1,
+  "source": "paper",
+  "balance_usdt": 19.5,
+  "positions_value": 2.1,
+  "total_equity": 21.6,
+  "positions": {"BTC/USDT": {"qty": 0.0005, "avg_cost": 42000.0}},
+  "timestamp": "2026-04-21T14:00:00Z"
+}]
+```
+
+### `GET /api/wallet/summary` — Most recent wallet snapshot.
+
+---
+
+## Provider
+
+### `GET /api/provider/ohlcv/{pair}`
+
+**Path:** `pair` — URL-encoded, e.g. `BTC%2FUSDT`  
+**Query:** `timeframe` (default `"1h"`) · `period` (default `"3m"`)
+
+**200:**
+```json
+[{"t": 1745234400000, "o": 42100.0, "h": 42350.0, "l": 41900.0, "c": 42200.0, "v": 143.5}]
+```
+
+`t` = Unix millisecond timestamp (UTC).
+
+### `PATCH /api/provider/config`
+Update exchange credentials at runtime.
+
+---
+
+## Market Scanner
+
+### `GET /api/market/scanner`
+
+**Query:** `pairs` (comma-separated) · `timeframe` · `period`
+
+**200:**
+```json
+[{
+  "pair": "BTC/USDT",
+  "price": 42200.0,
+  "change_1h_pct": 0.4,
+  "change_24h_pct": 2.8,
+  "atr_pct": 1.8,
+  "adx": 28.4,
+  "rsi": 56.2,
+  "volume_24h_usd": 1420000.0,
+  "trend": "bullish",
+  "regime": "trending",
+  "suggested_strategies": [
+    {"name": "trend_following", "reason": "ADX > 25, uptrend confirmed"}
+  ]
+}]
+```
+
+### `GET /api/market/summary` — High-level market overview.
+
+---
+
+## Strategy Configs
+
+Saved composable configurations (execution strategy + HTF filter + risk overrides + pairs).
+
+### `GET /api/strategy-configs`
+
+**200:**
+```json
+[{
+  "id": 1,
+  "name": "BTC Trend Follower",
+  "execution_strategy": "ema_crossover",
+  "execution_timeframe": "1h",
+  "trend_filter_strategy": "trend_following",
+  "trend_filter_timeframe": "4h",
+  "risk_profile": {
+    "stop_loss_pct": 2.0,
+    "take_profit_pct": 5.0,
+    "position_size_pct": 5.0,
+    "leverage": 3.0,
+    "max_drawdown_pct": 8.0,
+    "daily_loss_stop_pct": 3.0
+  },
+  "pairs": ["BTC/USDT"],
+  "notes": "Conservative BTC trend config",
+  "created_at": "2026-04-01T00:00:00Z"
+}]
+```
+
+### `POST /api/strategy-configs` → `201` — Body: same schema minus `id`, `created_at`.
+
+### `GET /api/strategy-configs/{id}` → `200` single config | `404`
+
+### `PUT /api/strategy-configs/{id}` → `200` full replace
+
+### `DELETE /api/strategy-configs/{id}` → `204`
+
+### `POST /api/strategy-configs/{id}/activate`
+
+Writes config to `config.yaml` as the active strategy.
+
+**200:** `{"activated": true, "strategy": "ema_crossover", "timeframe": "1h"}`
+
+---
+
+## System Metrics
+
+### `GET /api/system/metrics`
+
+```json
+{
+  "cpu_pct": 12.4,
+  "ram_pct": 48.2,
+  "ram_used_mb": 386,
+  "disk_pct": 23.1,
+  "disk_used_gb": 4.6,
+  "process_uptime_s": 86400,
+  "python_version": "3.11.9"
+}
+```
+
+---
+
+## Config Editor
+
+### `GET /api/config/settings` — Editable config (secrets stripped)
+
+### `PATCH /api/config/risk`
+```json
+{"leverage": 3.0, "max_drawdown_pct": 8.0, "daily_loss_stop_pct": 3.0}
+```
+
+### `PATCH /api/config/bot`
+```json
+{"strategy": "pullback", "pairs": ["BTC/USDT", "ETH/USDT"], "timeframe": "4h"}
+```
+
+---
+
+## Portfolio
+
+### `GET /api/portfolio/status` — Aggregate + per-slot breakdown.
+### `POST /api/portfolio/start` → `200`
+### `POST /api/portfolio/stop` → `200`
+
+---
+
+## WebSocket
+
+### `WS /api/ws/bot`
+
+```
+ws://localhost:8000/api/ws/bot?api_key=<BOT_API_SECRET>
+```
+
+**Message envelope:**
+```json
+{"type": "status|trade|equity|event|ping", "data": {...}}
+```
+
+| Type | Payload | Cadence |
+|---|---|---|
+| `status` | Full BotStatus | Every 30s + on change |
+| `trade` | Trade object | On each trade |
+| `equity` | `{"equity_usdt": 21.5, "ts": "..."}` | Every 5 min |
+| `event` | BotEvent | On lifecycle change |
+| `ping` | `{"ts": "..."}` | Every 30s (keepalive) |
+
+Reconnect with exponential backoff on disconnect.
+
+---
+
+## Default Limits
+
+| Endpoint | Default | Max |
+|---|---|---|
+| `GET /api/backtests` | 50 | 200 |
+| `GET /api/trades` | 200 | 1000 |
+| `GET /api/bot/history` | 20 | 100 |
+| `GET /api/wallet/history` | 100 | 500 |
