@@ -9,6 +9,7 @@ The notifier is replaced by a simple spy that records sent messages.
 """
 
 import pytest
+from typing import Optional
 from api.anomaly_detector import AnomalyDetector
 
 
@@ -23,7 +24,7 @@ class _SpyNotifier:
         self.messages.append(text)
 
     @property
-    def last(self) -> str | None:
+    def last(self) -> Optional[str]:
         return self.messages[-1] if self.messages else None
 
     def reset(self):

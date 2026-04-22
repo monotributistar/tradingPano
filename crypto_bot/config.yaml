@@ -256,6 +256,23 @@ strategies:
     use_shorts: true
 
 testnet: true
+
+# ── OANDA CFD configuration ────────────────────────────────────────────────────
+# Set exchange: oanda above (instead of "bybit") and provide credentials
+# via OANDA_API_KEY / OANDA_ACCOUNT_ID env vars to trade forex / CFDs.
+#
+# oanda:
+#   environment: practice     # "practice" (demo) | "live" (real money)
+#   account_id: ""            # override via OANDA_ACCOUNT_ID env var
+#   api_key: ""               # override via OANDA_API_KEY env var
+#   fee_pct: 0.0              # OANDA charges spread, no explicit fee
+#   slippage_pct: 0.0005
+#
+# pairs (forex / CFD examples):
+# - EUR/USD
+# - GBP/USD
+# - XAU/USD   # gold CFD
+# - US30/USD  # Dow Jones CFD
 risk:
   leverage: 6.0
   max_concurrent_positions: 2

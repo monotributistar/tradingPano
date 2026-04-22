@@ -22,6 +22,7 @@ All orders use retry + exponential backoff on rate-limit / network errors.
 import logging
 import os
 import time
+from typing import Optional
 
 import ccxt
 import pandas as pd
@@ -255,7 +256,7 @@ class LiveEngine(BaseEngine):
 
     # ── Positions (futures) ────────────────────────────────────────────────────
 
-    def fetch_positions(self, pair: str | None = None) -> list:
+    def fetch_positions(self, pair: Optional[str] = None) -> list:
         """
         Fetch open positions from the exchange (futures only).
 

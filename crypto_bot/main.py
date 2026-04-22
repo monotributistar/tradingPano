@@ -267,6 +267,62 @@ class BotRunner:
             )
             del self._positions[pair]
 
+        elif signal_obj.signal.name == "SHORT" and signal_obj.amount_usd > 0:
+            if pair in self._positions:
+                return   # already have a position on this pair
+            if not hasattr(self.engine, "short_open"):
+                return
+            order = self.engine.short_open(pair, signal_obj.amount_usd)
+            if order.get("status") in ("rejected", "unsupported", "error"):
+                return
+
+            qty = order.get("qty", signal_obj.amount_usd / max(signal_obj.price, 1e-10))
+            fill_price = order.get("price", signal_obj.price)
+            fee = order.get("fee", 0)
+            self._positions[pair] = {
+                "qty": qty, "avg_cost": fill_price, "side": "short",
+                "entry_time": time.time(), "bars_held": 0
+            }
+            self.logger.log_buy(
+                pair, fill_price, qty, fee,
+                self.strategy.name, signal_obj.reason, self.mode
+            )
+            console.print(
+                f"[magenta]SHORT[/magenta] {qty:.6f} {pair.split('/')[0]} "
+                f"@ {fill_price:.4f} | {signal_obj.reason}"
+            )
+
+        elif signal_obj.signal.name in ("COVER",) or (
+            signal_obj.signal.name in ("SELL", "STOP_LOSS", "TIME_EXIT")
+            and self._positions.get(pair, {}).get("side") == "short"
+        ):
+            pos = self._positions.get(pair)
+            if not pos or pos.get("side") != "short":
+                return
+            if not hasattr(self.engine, "short_cover"):
+                return
+            order = self.engine.short_cover(pair, pos["qty"])
+            if order.get("status") in ("rejected", "unsupported", "error"):
+                return
+
+            qty = order.get("qty", pos["qty"])
+            fill_price = order.get("price", signal_obj.price)
+            fee = order.get("fee", 0)
+            cost = pos["qty"] * pos["avg_cost"]
+            pnl = (pos["avg_cost"] - fill_price) * qty - fee   # short P&L
+            pnl_pct = pnl / cost * 100 if cost else 0
+
+            self.logger.log_sell(
+                pair, fill_price, qty, fee, pnl, pnl_pct,
+                self.strategy.name, signal_obj.reason, self.mode
+            )
+            pnl_color = "green" if pnl >= 0 else "red"
+            console.print(
+                f"[cyan]COVER[/cyan] {qty:.6f} {pair.split('/')[0]} @ {fill_price:.4f} | "
+                f"PnL: [{pnl_color}]{pnl:+.4f} USDT ({pnl_pct:+.2f}%)[/{pnl_color}] | {signal_obj.reason}"
+            )
+            del self._positions[pair]
+
     def run(self, timeframe: str = "1h"):
         console.print(f"[bold]Bot iniciado[/bold] — modo=[cyan]{self.mode}[/cyan] "
                       f"estrategia=[cyan]{self.strategy.name}[/cyan] "
@@ -417,8 +473,8 @@ def paper(ctx, strategy, pairs):
     strategy_name = strategy or config.get("active_strategy", "mean_reversion")
     pair_list = pairs.split(",") if pairs else config.get("pairs", ["BTC/USDT"])
 
-    from engine.paper import PaperEngine
-    engine = PaperEngine(config)
+    from engine import create_engine
+    engine = create_engine(config, mode="paper")
     s = load_strategy(strategy_name, config)
     timeframe = config.get("backtest", {}).get("timeframe", "1h")
 
@@ -449,8 +505,8 @@ def live(ctx, strategy, pairs):
     )
     input()
 
-    from engine.live import LiveEngine
-    engine = LiveEngine(config)
+    from engine import create_engine
+    engine = create_engine(config, mode="live")
     s = load_strategy(strategy_name, config)
     timeframe = config.get("backtest", {}).get("timeframe", "1h")
 

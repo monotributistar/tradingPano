@@ -418,10 +418,8 @@ def _load_and_run(mode: str, strategy_name: str, pairs: List[str],
                   config: dict, stop_event: threading.Event,
                   restore: bool = False) -> None:
     # ── Engine ──────────────────────────────────────────────────────────────
-    if mode == "paper":
-        from engine.paper import PaperEngine as EngineClass
-    else:
-        from engine.live import LiveEngine as EngineClass
+    from engine import create_engine
+    engine = create_engine(config, mode=mode)
 
     # ── Strategy ────────────────────────────────────────────────────────────
     from api.main import get_strategy_registry
@@ -432,7 +430,6 @@ def _load_and_run(mode: str, strategy_name: str, pairs: List[str],
     strategy = registry[strategy_name]()
     strategy.initialize(config.get("strategies", {}).get(strategy_name, {}))
 
-    engine          = EngineClass(config)
     trade_logger    = _make_trade_logger(mode)
     initial_balance = config.get(mode, {}).get("initial_balance", 20.0)
 
