@@ -54,9 +54,23 @@ This document describes the system design, data flows, component contracts, and 
 │  └────────────────────────────────────────────────────────────┘    │
 │                                │                                    │
 │  ┌─────────────────────────────▼──────────────────────────────┐    │
-│  │              ccxt (exchange connectivity)                  │    │
-│  │  Bybit · KuCoin · OKX · Gate · Kraken · Binance            │    │
-│  └────────────────────────────────────────────────────────────┘    │
+│  │           engine/__init__.py  create_engine()             │    │
+│  │  exchange=bybit/…  mode=live  → LiveEngine  (ccxt)        │    │
+│  │  exchange=bybit/…  mode=paper → PaperEngine (ccxt prices) │    │
+│  │  exchange=oanda    mode=live  → OandaEngine (v20 REST)    │    │
+│  │  exchange=oanda    mode=paper → OandaPaperEngine          │    │
+│  └────────────────────────┬───────────────────┬─────────────┘    │
+│                           │                   │                    │
+│  ┌────────────────────────▼──┐  ┌─────────────▼───────────────┐   │
+│  │  ccxt                     │  │  oandapyV20                 │   │
+│  │  Bybit · KuCoin · OKX ·  │  │  OANDA v20 REST API         │   │
+│  │  Gate · Kraken · Binance  │  │  Forex · CFD · Commodities  │   │
+│  └───────────────────────────┘  └─────────────────────────────┘   │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  margin_monitor.py  MarginMonitor (daemon thread, OANDA)    │   │
+│  │  Polls get_margin_info() · alerts ≤150% · stops ≤110%       │   │
+│  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -230,6 +244,8 @@ Cache TTL: **1 hour**. Manual invalidation: delete files in `crypto_bot/data/cac
 
 ## Exchange Connectivity
 
+### Crypto (ccxt)
+
 ```
 ccxt exchange instance
   └── fallback chain:
@@ -241,6 +257,23 @@ Live/paper mode: uses EXCHANGE_API_KEY + EXCHANGE_API_SECRET
 Backtest mode:   uses public endpoints (no auth needed)
 Testnet:         enabled by default (config.yaml: testnet: true)
 ```
+
+### Forex / CFD (OANDA v20)
+
+```
+OandaEngine / OandaPaperEngine
+  └── oandapyV20 REST client
+      Credentials: OANDA_API_KEY + OANDA_ACCOUNT_ID (env vars)
+      Environment: OANDA_ENVIRONMENT = "practice" | "live"
+
+Pair convention:  EUR/USD (internal) ↔ EUR_USD (OANDA API)
+Order sizing:     USDT amount → integer units via mid price × leverage
+Short selling:    negative units (no separate short account needed)
+Overnight cost:   tracked via _swap_accrual + accrue_swap()
+Margin guard:     MarginMonitor daemon thread (alerts 150%, stops 110%)
+```
+
+Full OANDA reference: [`docs/OANDA.md`](OANDA.md)
 
 ---
 

@@ -232,7 +232,50 @@ Changes take effect on the next bot start (the API reloads config on startup). Y
 
 ---
 
-## 9. Common Issues
+## 9. Trading Forex / CFD via OANDA
+
+To trade forex pairs (EUR/USD, GBP/USD) or CFD instruments (XAU/USD gold,
+US30 Dow Jones) instead of crypto, switch to the OANDA engine.
+
+### Quick setup
+
+```bash
+# 1. Add credentials to .env
+echo "OANDA_API_KEY=your-personal-access-token"   >> .env
+echo "OANDA_ACCOUNT_ID=001-001-1234567-001"        >> .env
+echo "OANDA_ENVIRONMENT=practice"                  >> .env
+
+# 2. Switch config.yaml
+#    exchange: oanda
+#    pairs: [EUR/USD, GBP/USD, XAU/USD]
+```
+
+```yaml
+# config.yaml
+exchange: oanda
+oanda:
+  environment: practice
+
+pairs:
+  - EUR/USD
+  - XAU/USD
+
+risk:
+  leverage: 20.0
+  use_futures: true   # enables SHORT/COVER signals
+```
+
+```bash
+# 3. Paper trade with real OANDA prices
+python3 crypto_bot/main.py --mode paper --strategy keltner_breakout
+```
+
+See [`docs/OANDA.md`](OANDA.md) for the full reference: engine modes, margin
+monitoring, swap cost simulation, troubleshooting, and strategy recommendations.
+
+---
+
+## 10. Common Issues
 
 ### `ModuleNotFoundError: No module named 'strategies'`
 The API uses `api/path_setup.py` to inject `crypto_bot/` into `sys.path`. If running the API directly (not via `make api`), set:

@@ -30,6 +30,13 @@
   - [BotEvent](#botevent)
 - [TypeScript Counterparts](#typescript-counterparts)
 - [Invariants and Validation Rules](#invariants-and-validation-rules)
+- [OANDA Engine Contracts](#oanda-engine-contracts)
+  - [BaseEngine optional CFD methods](#baseengine--optional-cfd-methods)
+  - [get_balance() OandaEngine shape](#get_balance-return-shape-oandaengine)
+  - [_place_order() return shape](#_place_order-return-shape)
+  - [get_margin_info() return shape](#get_margin_info-return-shape)
+  - [MarginMonitor.check_once() return shape](#marginmonitorcheck_once-return-shape)
+  - [BacktestRunner total_swap_cost key](#backtestrunnerrun--additional-result-key)
 - [Contract Change Protocol](#contract-change-protocol)
 
 ---
@@ -754,6 +761,98 @@ These invariants must hold at all times. Tests should encode them explicitly.
 | `sharpe_ratio` | Any real number (negative means underperformed risk-free) |
 | `total_trades` | `>= 0` |
 | `avg_trade_duration_bars` | `>= 0` |
+
+---
+
+## OANDA Engine Contracts
+
+### BaseEngine — optional CFD methods
+
+Source: `crypto_bot/engine/base.py`
+
+These methods have default no-op implementations in `BaseEngine` so that
+`LiveEngine` and `PaperEngine` work unchanged.  `OandaEngine` overrides all four.
+
+```python
+def short_open(self, pair: str, usdt_amount: float) -> dict:
+    """Open a short position. Default: returns {"status": "unsupported"}."""
+
+def short_cover(self, pair: str, qty: float) -> dict:
+    """Close a short position. Default: returns {"status": "unsupported"}."""
+
+def get_margin_info(self) -> dict:
+    """Return CFD margin info. Default: returns {}."""
+
+def get_financing_cost(self) -> float:
+    """Return total accrued overnight financing. Default: returns 0.0."""
+```
+
+### `get_balance()` return shape (OandaEngine)
+
+```python
+{
+    "USDT":         float,   # account balance (base currency)
+    "nav":          float,   # net asset value
+    "unrealizedPL": float,   # open position unrealized P&L
+    "margin_used":  float,   # margin currently allocated
+    "margin_avail": float,   # margin available for new positions
+    "margin_level": float,   # (NAV / margin_used) × 100; 9999.0 if no positions
+}
+```
+
+### `_place_order()` return shape
+
+```python
+# Success:
+{"status": "filled", "price": float, "qty": float, "fee": float, "order_id": str}
+
+# Failure (any exception):
+{"status": "error", "reason": str}
+```
+
+### `get_margin_info()` return shape
+
+```python
+{
+    "margin_level":     float,   # % — 9999.0 when no open positions
+    "margin_used":      float,
+    "margin_available": float,
+    "nav":              float,
+}
+```
+
+### `MarginMonitor.check_once()` return shape
+
+Source: `crypto_bot/margin_monitor.py`
+
+```python
+# Normal cases:
+{"level": float, "action": "ok" | "warn" | "alert" | "stop"}
+
+# Engine error:
+{"level": 0.0, "action": "error", "error": str}
+```
+
+Action thresholds:
+
+| `action` | Condition |
+|---|---|
+| `"ok"` | level > 200% (or 9999 — no open positions) |
+| `"warn"` | 150% < level ≤ 200% |
+| `"alert"` | 110% < level ≤ 150% — Telegram notifier called |
+| `"stop"` | level ≤ 110% — notifier + `bot_manager.stop()` |
+| `"error"` | `get_margin_info()` raised an exception |
+
+### `BacktestRunner.run()` — additional result key
+
+When `config["backtest"]["swap_cost_daily_pct"] > 0`:
+
+```python
+result["total_swap_cost"]  # float — total financing deducted from balance
+```
+
+The equity curve and metrics already reflect this deduction.  The key is
+always present (value `0.0` when swap rate is `0`).
 
 ---
 

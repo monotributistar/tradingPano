@@ -197,6 +197,7 @@ To invalidate: `rm crypto_bot/data/cache/*.csv.gz`
 | `docs/api-contracts.md` | Every API endpoint with request/response JSON examples |
 | `docs/strategies.md` | Strategy catalog with metadata and selection guide |
 | `docs/getting-started.md` | Local, Docker, and VPS setup |
+| `docs/OANDA.md` | OANDA CFD adapter: setup, engine API, MarginMonitor, swap cost, troubleshooting |
 
 ---
 
