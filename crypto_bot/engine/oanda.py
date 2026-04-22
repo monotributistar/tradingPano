@@ -50,6 +50,7 @@ import oandapyV20.endpoints.orders as v20_orders
 import oandapyV20.endpoints.pricing as v20_pricing
 import oandapyV20.endpoints.accounts as v20_accounts
 import oandapyV20.endpoints.instruments as v20_instruments
+import oandapyV20.endpoints.positions as v20_positions
 from oandapyV20.exceptions import V20Error
 
 from engine.base import BaseEngine
@@ -285,6 +286,39 @@ class OandaEngine(BaseEngine):
     def get_financing_cost(self) -> float:
         """Return total accumulated overnight financing cost (USD)."""
         return sum(self._swap_accrual.values())
+
+    def accrue_swap(self, instrument: str) -> None:
+        """
+        Fetch the current financing charge for ``instrument`` from the OANDA
+        positions endpoint and add it to the local accumulator.
+
+        Called by the bot runner once per candle close (or on a schedule).
+        Safe to call when no position is open — OANDA returns financing=0.
+
+        Parameters
+        ----------
+        instrument : str
+            OANDA instrument notation, e.g. ``"EUR_USD"``.
+        """
+        try:
+            r    = v20_positions.PositionDetails(self.account_id, instrument)
+            resp = self.client.request(r)
+            pos  = resp.get("position", {})
+            financing = float(pos.get("financing", 0.0))
+            self._swap_accrual[instrument] = (
+                self._swap_accrual.get(instrument, 0.0) + financing
+            )
+            if financing != 0.0:
+                logger.info(
+                    "[OandaEngine] Swap accrual %s: %.4f (total %.4f)",
+                    instrument, financing,
+                    self._swap_accrual[instrument],
+                )
+        except Exception as exc:
+            logger.warning(
+                "[OandaEngine] accrue_swap(%s) failed: %s — skipping",
+                instrument, exc,
+            )
 
     # ── Internal helpers ────────────────────────────────────────────────────────
 

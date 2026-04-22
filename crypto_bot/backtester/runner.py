@@ -44,6 +44,10 @@ class BacktestRunner:
         self.slippage_pct = bt_cfg.get("slippage_pct", 0.05) / 100
         self.timeframe = bt_cfg.get("timeframe", "1h")
         self.data_source = bt_cfg.get("data_source", "kucoin")
+        # Daily overnight financing cost as a fraction of position value.
+        # Divided by bars_per_day to get per-bar cost.
+        # 0.0 disables the feature (default, backward-compatible).
+        self.swap_cost_daily_pct = float(bt_cfg.get("swap_cost_daily_pct", 0.0)) / 100
         self.config = config  # keep full config for risk manager
         self.results_dir = Path("data/backtest_results")
         self.results_dir.mkdir(parents=True, exist_ok=True)
@@ -99,6 +103,17 @@ class BacktestRunner:
         equity_curve = []
         equity_timestamps = []
         halt_events = []  # track when the risk manager halted
+        total_swap_cost = 0.0  # accumulated overnight financing charges
+
+        # Bars-per-day mapping used to amortise the daily swap rate.
+        _bars_per_day: dict[str, float] = {
+            "M1": 1440, "M5": 288, "M15": 96, "M30": 48,
+            "H1": 24,   "H4": 6,   "H12": 2,  "D": 1,
+            "1m": 1440, "5m": 288, "15m": 96, "30m": 48,
+            "1h": 24,   "4h": 6,   "12h": 2,  "1d": 1,
+            "1w": 1/7,
+        }
+        bars_per_day = _bars_per_day.get(active_timeframe, 24)
 
         # Risk manager enforces leverage, daily loss stop, position sizing
         risk_mgr = RiskManager(self.config, self.initial_capital)
@@ -112,6 +127,18 @@ class BacktestRunner:
 
             if position is not None:
                 position["bars_held"] += 1
+
+            # ── OVERNIGHT FINANCING (SWAP) COST ────────────────────────────────
+            # Deduct per-bar swap cost from balance while a position is open.
+            # cost_per_bar = (swap_cost_daily_pct / bars_per_day) * position_value
+            if position is not None and self.swap_cost_daily_pct > 0.0:
+                if position["side"] == "long":
+                    pos_value = position["qty"] * price
+                else:  # short
+                    pos_value = position["collateral"]
+                swap_cost = (self.swap_cost_daily_pct / bars_per_day) * pos_value
+                balance_usdt -= swap_cost
+                total_swap_cost += swap_cost
 
             signal_obj: TradeSignal = strategy.on_candle(pair, candles, position)
             sig = signal_obj.signal
@@ -315,6 +342,7 @@ class BacktestRunner:
             "halt_events": halt_events,
             "risk_info": risk_mgr.info(),
             "run_at": datetime.now(tz=timezone.utc).isoformat(),
+            "total_swap_cost": round(total_swap_cost, 6),
         }
 
     def save_result(self, result: dict) -> Path:
